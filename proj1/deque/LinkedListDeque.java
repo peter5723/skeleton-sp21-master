@@ -1,6 +1,6 @@
 package deque;
 
-import java.util.Iterator;
+
 
 public class LinkedListDeque<T> {
     private class Node {
@@ -52,7 +52,7 @@ public class LinkedListDeque<T> {
         if  (i == sentinel) {
             return;
         }
-        System.out.println(i.item);
+        System.out.println(i.item + " ");
         printDequeNode(i.next);
     }
     public void printDeque() {
@@ -106,11 +106,5 @@ public class LinkedListDeque<T> {
         return getRecursiveNode(index, sentinel.next);
     }
 
-    public Iterator<T> iterator() {
-        return null;
-    }
 
-    public boolean equals(Object o) {
-        return true;
-    }
 }
