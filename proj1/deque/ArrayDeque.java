@@ -107,6 +107,9 @@ public class ArrayDeque<T> {
     shrinkArray
      */
     private void shrinkArray() {
+        if(size() <= 8) {
+            return;
+        }
         T[] tempArray = (T[]) new Object[capacity / 2];
         if (getFirstElementIndex() < getLastElementIndex()) {
             System.arraycopy(items, getFirstElementIndex(), tempArray, 0, size());

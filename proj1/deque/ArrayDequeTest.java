@@ -90,4 +90,15 @@ public class ArrayDequeTest {
         assertEquals(10, arr1.size());
         arr1.printDeque();
     }
+
+    @Test
+    public void testRemove2(){
+        ArrayDeque<Integer> arr1 = new ArrayDeque();
+        for(int i=0; i<=7; i++){
+            arr1.addFirst(i);
+        }
+        for(int i=0; i<=7; i++){
+            assertEquals(7-i, (int)arr1.removeFirst());
+        }
+    }
 }
