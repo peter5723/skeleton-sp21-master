@@ -1,5 +1,4 @@
 package timingtest;
-import afu.org.checkerframework.checker.igj.qual.I;
 import edu.princeton.cs.algs4.Stopwatch;
 
 /**
