@@ -8,6 +8,8 @@ public class Flik {
      *  @param b Value 2
      *  @return Whether a and b are the same */
     public static boolean isSameNumber(Integer a, Integer b) {
-        return a == b;
+        return a.equals(b);
+        //int是基本类型而Integer是一个对象, 错在这儿
+        //a==b
     }
 }
