@@ -2,7 +2,7 @@ package deque;
 
 
 
-public class LinkedListDeque<T> {
+public class LinkedListDeque<T> implements Deque<T> {
     private class Node {
         private T item;
         private Node next;
@@ -24,14 +24,14 @@ public class LinkedListDeque<T> {
         sentinel.next = sentinel;
     }
 
-
+    @Override
     public void addFirst(T item) {
         size += 1;
         Node temp = new Node(item, sentinel.next, sentinel);
         sentinel.next = temp;
         temp.next.prev = temp;
     }
-
+    @Override
     public void addLast(T item) {
         size += 1;
         Node temp = new Node(item, sentinel, sentinel.prev);
@@ -39,10 +39,7 @@ public class LinkedListDeque<T> {
         temp.prev.next = temp;
     }
 
-    public boolean isEmpty() {
-        return sentinel.next == sentinel && sentinel.prev == sentinel;
-    }
-
+    @Override
     public int size() {
         return size;
     }
@@ -55,10 +52,12 @@ public class LinkedListDeque<T> {
         System.out.println(i.item + " ");
         printDequeNode(i.next);
     }
+    @Override
     public void printDeque() {
         printDequeNode(sentinel.next);
         System.out.print("\n");
     }
+    @Override
     public T removeFirst() {
         T tempItem = sentinel.next.item;
         sentinel.next = sentinel.next.next;
@@ -68,6 +67,7 @@ public class LinkedListDeque<T> {
         }
         return tempItem;
     }
+    @Override
     public T removeLast() {
         T tempItem = sentinel.prev.item;
         sentinel.prev = sentinel.prev.prev;
@@ -78,6 +78,7 @@ public class LinkedListDeque<T> {
         return tempItem;
     }
 
+    @Override
     public T get(int index) {
         if (index >= size) {
             return null;
