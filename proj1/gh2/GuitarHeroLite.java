@@ -29,7 +29,7 @@ public class GuitarHeroLite {
             /* compute the superposition of samples */
             double sample = stringA.sample() + stringC.sample();
 
-            /* play the sample on standard audio */
+            /*a play the sample on standard audio */
             StdAudio.play(sample);
 
             /* advance the simulation of each guitar string by one step */

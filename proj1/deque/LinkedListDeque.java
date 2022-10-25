@@ -118,12 +118,36 @@ public class LinkedListDeque<T> implements Deque<T>, Iterable<T> {
             nowPos = sentinel.next;
         }
         public boolean hasNext() {
-            return nowPos.next != sentinel;
+            return nowPos != sentinel;
         }
         public T next() {
            T returnItem = nowPos.item;
            nowPos = nowPos.next;
            return returnItem;
         }
+        //对迭代器来说, next表示"当前"的那个值, 其实是now的意思
+    }
+
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (o == null || o.getClass() != this.getClass()) {
+            return false;
+        }
+        LinkedListDeque<T> temp = (LinkedListDeque<T>) o;
+        if (temp.size() != size()) {
+            return false;
+        }
+        Node node1 = this.sentinel.next;
+        Node node2 = temp.sentinel.next;
+        while (node1 != sentinel) {
+            if (!node1.item.equals(node2.item)) {
+                return false;
+            }
+            node1 = node1.next;
+            node2 = node2.next;
+        }
+        return true;
     }
 }
