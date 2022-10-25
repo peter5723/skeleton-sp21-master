@@ -2,7 +2,7 @@ package deque;
 
 import java.util.Iterator;
 
-public class ArrayDeque<T> implements Deque<T>, Iterable<T>{
+public class ArrayDeque <T> implements Deque<T>, Iterable<T>{
     private int numOfElements;
     private int capacity; //the whole length of the array
     private T[] items;
@@ -15,39 +15,22 @@ public class ArrayDeque<T> implements Deque<T>, Iterable<T>{
         this.nextFirst = 3;
         this.numOfElements = 0;
     }
-
     private int getFirstElementIndex() {
         return (nextFirst + 1) % capacity;
     }
     private int getLastElementIndex() {
         return (nextLast + capacity - 1) % capacity;
     }
-
-    private void updateNextFirst(boolean isAdd) {
-        if (isAdd) {
-            nextFirst = (nextFirst + capacity - 1) % capacity;
-        } else {
-            nextFirst = (nextFirst + capacity + 1) % capacity;
-        }
-    }
-
-    private void updateNextLast(boolean isAdd) {
-        if (isAdd) {
-            nextLast = (nextLast + 1) % capacity;
-        } else {
-            nextLast = (nextLast + capacity - 1) % capacity;
-        }
-
-    }
     private boolean isFull() {
         return numOfElements == capacity;
     }
-    /*resize
-    adjust the size of the array and nextFirst and nextLast;
-     */
-    private void resize() {
 
-        T[] tempArray = (T[]) new Object[capacity * 2];
+    private void resize(int newCapacity) {
+        if (newCapacity < 8) {
+            return;
+        }
+        T[] tempArray = (T[]) new Object[newCapacity];
+
         if (getFirstElementIndex() < getLastElementIndex()) {
             System.arraycopy(items, getFirstElementIndex(), tempArray, 0, size());
         } else {
@@ -57,26 +40,27 @@ public class ArrayDeque<T> implements Deque<T>, Iterable<T>{
             System.arraycopy(items, 0, tempArray, length1, length2);
         }
         items = tempArray;
-        capacity *= 2;
+        capacity = newCapacity;
         nextFirst = capacity - 1;
         nextLast = size();
     }
+
     @Override
     public void addFirst(T item) {
         if (isFull()) {
-            resize();
+            resize(capacity*2);
         }
         items[nextFirst] = item; //add elements
-        updateNextFirst(true);
+        nextFirst = (nextFirst + capacity - 1) % capacity; //update nextFirst
         numOfElements++;
     }
     @Override
     public void addLast(T item) {
         if (isFull()) {
-            resize();
+            resize(capacity*2);
         }
         items[nextLast] = item;
-        updateNextLast(true);
+        nextLast = (nextLast + 1) % capacity; //update nextLast
         numOfElements++;
     }
 
@@ -100,27 +84,6 @@ public class ArrayDeque<T> implements Deque<T>, Iterable<T>{
         }
         return items[(nextFirst + 1 + index + capacity) % capacity];
     }
-    /*
-    shrinkArray
-     */
-    private void shrinkArray() {
-        if(size() <= 8) {
-            return;
-        }
-        T[] tempArray = (T[]) new Object[capacity / 2];
-        if (getFirstElementIndex() < getLastElementIndex()) {
-            System.arraycopy(items, getFirstElementIndex(), tempArray, 0, size());
-        } else {
-            int length1 = size() - getFirstElementIndex();
-            int length2 = size() - length1;
-            System.arraycopy(items, getFirstElementIndex(), tempArray, 0, length1);
-            System.arraycopy(items, 0, tempArray, length1, length2);
-        }
-        items = tempArray;
-        capacity /= 2;
-        nextFirst = capacity - 1;
-        nextLast = size();
-    }
     @Override
     public T removeFirst() {
         if (isEmpty()) {
@@ -128,12 +91,12 @@ public class ArrayDeque<T> implements Deque<T>, Iterable<T>{
         }
 
         if (numOfElements - 1 < capacity * 0.25) {
-            shrinkArray();
+            resize(capacity / 2);
         }
         numOfElements--;
         T tempItem = items[getFirstElementIndex()];
         items[getFirstElementIndex()] = null;
-        updateNextFirst(false);
+        nextFirst = (nextFirst + capacity + 1) % capacity;
         return tempItem;
     }
     @Override
@@ -142,12 +105,12 @@ public class ArrayDeque<T> implements Deque<T>, Iterable<T>{
             return null;
         }
         if (numOfElements - 1 < capacity * 0.25) {
-            shrinkArray();
+            resize(capacity / 2);
         }
         numOfElements--;
         T tempItem = items[getLastElementIndex()];
         items[getLastElementIndex()] = null;
-        updateNextLast(false);
+        nextLast = (nextLast + capacity - 1) % capacity;
         return tempItem;
     }
     public Iterator<T> iterator() {
@@ -160,16 +123,19 @@ public class ArrayDeque<T> implements Deque<T>, Iterable<T>{
             nowPos = getFirstElementIndex();
         }
         public boolean hasNext() {
+            if(isEmpty()) {
+                return false;
+            }
             if (getFirstElementIndex() <= getLastElementIndex()) {
                 return nowPos <= getLastElementIndex();
             } else {
                 return (nowPos <= getLastElementIndex()) || (nowPos > getFirstElementIndex()) ||
-                        (nowPos == getFirstElementIndex() && firstHasIter == false);
+                        (nowPos == getFirstElementIndex() && !firstHasIter);
             }
         }
         public T next() {
             T returnItem = items[nowPos];
-            if (nowPos == getFirstElementIndex() && firstHasIter == false) {
+            if (nowPos == getFirstElementIndex() && !firstHasIter) {
                 firstHasIter = true;
             }
             nowPos = (nowPos + 1) % capacity;
