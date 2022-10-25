@@ -10,7 +10,8 @@ public class GuitarHeroLiteAll {
         String keyboard = "q2we4r5ty7u8i9op-[=zxdcfvgbnjmk,.;/' ";
         GuitarString[] guitarStrings = new GuitarString[37];
         for (int i = 0; i < 37; i++) {
-            guitarStrings[i] = new GuitarString(CONCERT_A * Math.pow(2.0, ((double) i - 24.0) / 12.0));
+            guitarStrings[i] = new GuitarString(CONCERT_A
+                   * Math.pow(2.0, ((double) i - 24.0) / 12.0));
         }
         int index = -1;
         while (true) {

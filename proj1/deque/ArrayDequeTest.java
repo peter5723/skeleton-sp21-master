@@ -1,4 +1,5 @@
 package deque;
+import edu.princeton.cs.algs4.StdRandom;
 import jh61b.junit.In;
 import org.junit.Test;
 import static org.junit.Assert.*;
@@ -100,6 +101,12 @@ public class ArrayDequeTest {
         for(int i=0; i<=7; i++){
             assertEquals(7-i, (int)arr1.removeFirst());
         }
+        for (int i = 0; i <= 8; i++) {
+            arr1.addLast(i);
+        }
+        for (int i = 0; i <= 8; i++) {
+            assertEquals(i, (int)arr1.removeFirst());
+        }
     }
 
     @Test
@@ -137,5 +144,60 @@ public class ArrayDequeTest {
         }
         assertTrue(arr1.equals(arr2));
 
+    }
+    @Test
+    public void randomTest() {
+        int N = 50000;
+        ArrayDeque<Integer> L = new ArrayDeque<>();
+        for (int i = 0; i < N; i++) {
+            int operationNumber = StdRandom.uniform(0, 4);
+            int randVal = StdRandom.uniform(0, 100);
+            switch (operationNumber) {
+                case 0:
+                    L.addLast(randVal);
+                    break;
+                case 1:
+                    L.addFirst(randVal);
+                    break;
+                case 2:
+                    L.get(0);
+                    break;
+                case 3:
+                    L.removeLast();
+                    break;
+                case 4:
+                    L.removeFirst();
+                    break;
+            }
+        }
+    }
+    private class Dog {
+        public String name;
+        public int size;
+        public Dog(String name, int size) {
+            this.name = name;
+            this.size = size;
+        }
+        public boolean equals(Object o) {
+            if (!(o instanceof Dog)) {
+                return false;
+            }
+            Dog o1 = (Dog) o;
+            return this.size == o1.size && this.name.equals(o1.name);
+        }
+    }
+    @Test
+    public void testEqualDog() {
+        ArrayDeque<Dog> arr1 = new ArrayDeque<>();
+        ArrayDeque<Dog> arr2 = new ArrayDeque<>();
+        Dog dog1 = new Dog("lan", 5);
+        Dog dog2 = new Dog("lan", 5);
+        Dog dog3 = new Dog("lan", 5);
+        Dog dog4 = new Dog("lan", 5);
+        arr1.addLast(dog1);
+        arr1.addLast(dog2);
+        arr2.addLast(dog3);
+        arr2.addLast(dog4);
+        assertTrue(arr1.equals(arr2));
     }
 }

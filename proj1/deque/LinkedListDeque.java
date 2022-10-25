@@ -114,16 +114,16 @@ public class LinkedListDeque<T> implements Deque<T>, Iterable<T> {
     }
     private class LinkedListDequeIterator implements Iterator<T> {
         private Node nowPos;
-        public LinkedListDequeIterator() {
+        LinkedListDequeIterator() {
             nowPos = sentinel.next;
         }
         public boolean hasNext() {
             return nowPos != sentinel;
         }
         public T next() {
-           T returnItem = nowPos.item;
-           nowPos = nowPos.next;
-           return returnItem;
+            T returnItem = nowPos.item;
+            nowPos = nowPos.next;
+            return returnItem;
         }
         //对迭代器来说, next表示"当前"的那个值, 其实是now的意思
     }
@@ -132,7 +132,7 @@ public class LinkedListDeque<T> implements Deque<T>, Iterable<T> {
         if (this == o) {
             return true;
         }
-        if (o == null || o.getClass() != this.getClass()) {
+        if (o == null || !(o instanceof LinkedListDeque)) {
             return false;
         }
         LinkedListDeque<T> temp = (LinkedListDeque<T>) o;
