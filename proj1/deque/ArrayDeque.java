@@ -1,6 +1,8 @@
 package deque;
 
-public class ArrayDeque<T> implements Deque<T> {
+import java.util.Iterator;
+
+public class ArrayDeque<T> implements Deque<T>, Iterable<T>{
     private int numOfElements;
     private int capacity; //the whole length of the array
     private T[] items;
@@ -147,5 +149,50 @@ public class ArrayDeque<T> implements Deque<T> {
         items[getLastElementIndex()] = null;
         updateNextLast(false);
         return tempItem;
+    }
+    public Iterator<T> iterator() {
+        return new ArrayDequeIterator();
+    }
+    private class ArrayDequeIterator implements Iterator<T> {
+        private int nowPos;
+        private boolean firstHasIter = false;
+        public ArrayDequeIterator() {
+            nowPos = getFirstElementIndex();
+        }
+        public boolean hasNext() {
+            if (getFirstElementIndex() <= getLastElementIndex()) {
+                return nowPos <= getLastElementIndex();
+            } else {
+                return (nowPos <= getLastElementIndex()) || (nowPos > getFirstElementIndex()) ||
+                        (nowPos == getFirstElementIndex() && firstHasIter == false);
+            }
+        }
+        public T next() {
+            T returnItem = items[nowPos];
+            if (nowPos == getFirstElementIndex() && firstHasIter == false) {
+                firstHasIter = true;
+            }
+            nowPos = (nowPos + 1) % capacity;
+            return returnItem;
+        }
+    }
+
+    public boolean equals(Object o) {
+        if(this == o) {
+            return true;
+        }
+        if(o == null || o.getClass() != this.getClass()) {
+            return false;
+        }
+        ArrayDeque<T> o1 = (ArrayDeque<T>) o;
+        if(o1.size() != this.size()) {
+            return false;
+        }
+        for(int i = 0; i < size(); i++) {
+            if(!o1.get(i).equals(this.get(i))) {
+                return false;
+            }
+        }
+        return true;
     }
 }

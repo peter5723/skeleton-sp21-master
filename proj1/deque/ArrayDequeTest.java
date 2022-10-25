@@ -101,4 +101,41 @@ public class ArrayDequeTest {
             assertEquals(7-i, (int)arr1.removeFirst());
         }
     }
+
+    @Test
+    public void testIterator() {
+        ArrayDeque<Integer> arr1 = new ArrayDeque();
+        for(int i=0; i<=7; i++){
+            arr1.addLast(i);
+        }
+        int i = 0;
+        for(Integer item:arr1){
+            assertEquals((int)item, (int)arr1.get(i));
+
+            i++;
+        }
+
+        ArrayDeque<Integer> arr2 = new ArrayDeque();
+        int j = 0;
+        for(int v=0; v<=1000; v++){
+            arr2.addLast(v);
+        }
+        for(Integer item:arr2){
+            assertEquals((int)item, (int)arr2.get(j));
+
+            j++;
+        }
+    }
+    @Test
+    public void testEqual() {
+        ArrayDeque<Integer> arr1 = new ArrayDeque();
+        assertTrue(!arr1.equals(null));
+        ArrayDeque<Integer> arr2 = new ArrayDeque();
+        for(int i=0; i<=7; i++){
+            arr1.addLast(i);
+            arr2.addLast(i);
+        }
+        assertTrue(arr1.equals(arr2));
+
+    }
 }
