@@ -194,10 +194,18 @@ public class ArrayDequeTest {
         Dog dog2 = new Dog("lan", 5);
         Dog dog3 = new Dog("lan", 5);
         Dog dog4 = new Dog("lan", 5);
+        Dog dog5 = new Dog("lan", 5);
+        Dog dog6 = new Dog("lan", 5);
         arr1.addLast(dog1);
         arr1.addLast(dog2);
         arr2.addLast(dog3);
         arr2.addLast(dog4);
         assertTrue(arr1.equals(arr2));
+        LinkedListDeque<Dog> arr3 = new LinkedListDeque<>();
+        arr3.addLast(dog5);
+        arr3.addLast(dog6);
+        assertTrue(arr1.equals(arr3));
+        assertTrue(arr3.equals(arr2));
+
     }
 }

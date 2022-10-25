@@ -147,17 +147,17 @@ public class ArrayDeque<T> implements Deque<T>, Iterable<T> {
         if (this == o) {
             return true;
         }
-        if (o == null || !(o instanceof ArrayDeque)) {
+        if (o == null || !(o instanceof Deque)) {
             return false;
-        }
-        ArrayDeque<T> o1 = (ArrayDeque<T>) o;
+        } //难怪要用instanceof, 有一个测试要比较arr和list的equal
+        Deque<T> o1 = (Deque<T>) o;
         if (o1.size() != this.size()) {
             return false;
         }
         for (int i = 0; i < size(); i++) {
             if (!o1.get(i).equals(this.get(i))) {
                 return false;
-            }
+            } //对象的equals, 测试的时候自己再写即可
         }
         return true;
     }
