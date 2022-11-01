@@ -118,29 +118,18 @@ public class ArrayDeque<T> implements Deque<T>, Iterable<T> {
     }
     private class ArrayDequeIterator implements Iterator<T> {
         private int nowPos;
-        private boolean firstHasIter = false;
-        ArrayDequeIterator() {
-            nowPos = getFirstElementIndex();
+
+        public ArrayDequeIterator() {
+            nowPos = 0;
         }
         public boolean hasNext() {
-            if (isEmpty()) {
-                return false;
-            }
-            if (getFirstElementIndex() <= getLastElementIndex()) {
-                return nowPos <= getLastElementIndex();
-            } else {
-                return (nowPos <= getLastElementIndex()) || (nowPos > getFirstElementIndex())
-                        || (nowPos == getFirstElementIndex() && !firstHasIter);
-            }
+           return nowPos <= size() - 1;
         }
         public T next() {
-            T returnItem = items[nowPos];
-            if (nowPos == getFirstElementIndex() && !firstHasIter) {
-                firstHasIter = true;
-            }
-            nowPos = (nowPos + 1) % capacity;
-            return returnItem;
-        }
+            T eleReturn = get(nowPos);
+            nowPos++;
+            return eleReturn;
+        } //不要破坏抽象！
     }
 
     public boolean equals(Object o) {
