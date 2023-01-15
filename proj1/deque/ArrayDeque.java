@@ -119,11 +119,11 @@ public class ArrayDeque<T> implements Deque<T>, Iterable<T> {
     private class ArrayDequeIterator implements Iterator<T> {
         private int nowPos;
 
-        public ArrayDequeIterator() {
+        ArrayDequeIterator() {
             nowPos = 0;
         }
         public boolean hasNext() {
-           return nowPos <= size() - 1;
+            return nowPos <= size() - 1;
         }
         public T next() {
             T eleReturn = get(nowPos);
