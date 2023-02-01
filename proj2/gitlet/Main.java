@@ -33,10 +33,15 @@ public class Main {
             case "commit":
                 Repository.JudgeInit();
                 if(args.length < 2) {
-                    System.out.println("Incorrect operands.");
+                    System.out.println("Please enter a commit message.");
                     System.exit(0);
                 }
                 Repository.commitGitlet(args[1]);
+                break;
+            case "log":
+                Repository.JudgeInit();
+                Repository.log();
+                break;
             // TODO: FILL THE REST IN
 
             default:

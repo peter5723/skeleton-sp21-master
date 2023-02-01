@@ -43,7 +43,9 @@ public class Commit implements Serializable {
     //题目要求二叉树即可；
     public Commit() {
         message = "initial commit";
-        date = "00:00:00 UTC, Thursday, 1 January 1970";
+        date = "Wed Dec 31 16:00:00 1969 -0800";
+        blobInfo = new BlobInfo();
+        //empty和null是不一样的。
     }
 
     public String getMessage() {
@@ -100,5 +102,14 @@ public class Commit implements Serializable {
 
     public void setChild2(String child2) {
         this.child2 = child2;
+    }
+
+    public String getHash() {
+        if(message==null || date==null) {
+            return null;
+        }
+        StringBuilder s = new StringBuilder(message);
+        s.append(date);
+        return Utils.sha1(s.toString());
     }
 }
