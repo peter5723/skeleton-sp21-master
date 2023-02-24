@@ -38,9 +38,17 @@ public class Main {
                 }
                 Repository.commitGitlet(args[1]);
                 break;
+            case "rm":
+                Repository.JudgeInit();
+                Repository.remove(args[1]);
+                break;
             case "log":
                 Repository.JudgeInit();
                 Repository.log();
+                break;
+            case "global-log":
+                Repository.JudgeInit();
+                Repository.globalLog();
                 break;
             // TODO: FILL THE REST IN
 

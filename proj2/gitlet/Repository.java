@@ -30,7 +30,13 @@ public class Repository {
     /** The .gitlet directory. */
     public static final File GITLET_DIR = join(CWD, ".gitlet");
 
+    public static final File MASTER_DIR = Utils.join(GITLET_DIR, "master");
 
+    public static final File BLOB_DIR = Utils.join(GITLET_DIR, "blob");
+
+    public static final File COMMIT_DIR = Utils.join(GITLET_DIR, "commit");
+
+    public static final File INDEX_DIR = Utils.join(GITLET_DIR, "index");
     /* TODO: fill in the rest of this class. */
 
     //private static String master;
@@ -39,13 +45,13 @@ public class Repository {
     //master也是要“离线储存”的
 
     public static String getMaster() {
-        File masterFile = Utils.join(GITLET_DIR, "master");
+        File masterFile = MASTER_DIR;
         String s = readObject(masterFile, String.class);
         return s;
     }
 
     public static void setMaster(String m) {
-        File masterFile = Utils.join(GITLET_DIR, "master");
+        File masterFile = MASTER_DIR;
         writeObject(masterFile,m);
     }
 
@@ -62,20 +68,20 @@ public class Repository {
         Commit m = new Commit();
         StringBuilder stringBuilder = new StringBuilder(m.getMessage());
         stringBuilder.append(m.getDate());
-        //sha1只能对字符串使用求解hash？？？
+        //sha1只能对字符串使用求解hash
         String msha = Utils.sha1(stringBuilder.toString());
 
 
         //下面构建blob文件夹、commit文件夹
         //index文件则是文件记录
-        File blobDir = Utils.join(GITLET_DIR, "blob");
-        File commitDir = Utils.join(GITLET_DIR, "commit");
+        File blobDir = BLOB_DIR;
+        File commitDir = COMMIT_DIR;
         //File indexFile = Utils.join(GITLET_DIR, "index");
         //indexFile.createNewFile();
         blobDir.mkdir();
         commitDir.mkdir();
 
-        File fm = Utils.join(GITLET_DIR,"commit",msha);
+        File fm = Utils.join(COMMIT_DIR,msha);
         setMaster(msha);
         //master指向当前commit
         Utils.writeObject(fm,m);
@@ -90,26 +96,36 @@ public class Repository {
             System.exit(0);
         }
         String a = Utils.readContentsAsString(f);
+        //只有在文件是文本文件的时候才可以使用readContentsAsString。
         Blob b = new Blob();
         b.setContents(a);
         b.setFilename(arg);
         String bSha1 = b.getSha1();
-        File f2 = Utils.join(GITLET_DIR,"blob",bSha1);
-        Utils.writeObject(f2, b);
-        //将暂存的blob存储到blob文件夹中
 
-        File indexFile = Utils.join(GITLET_DIR, "index");
+
+        File f2 = Utils.join(BLOB_DIR,bSha1);
+        Utils.writeObject(f2, b);
+        //将暂存的blob存储到blob文件夹中,不用管是否重复了
+
+        File indexFile = Utils.join(INDEX_DIR);
         BlobInfo bInfo = new BlobInfo();
         if(indexFile.exists()) {
             bInfo = Utils.readObject(indexFile, BlobInfo.class);
         }
         bInfo.add(arg,bSha1);
+        //如果add的文件binfo中已经存在，就会自动更新成新版本的
+        //最后，若存储的blob和前面一个commit中的完全一致，则不应add，将之从blobinfo列表中删除
+
+        Commit master = masterCommit();
+        BlobInfo oldBlobInfo = master.getBlobInfo();
+        String oldSha1 = oldBlobInfo.find(arg);
+        if(oldSha1!=null&&oldSha1.equals(bSha1)) {
+            bInfo.remove(arg);
+        }
+        //这很简单，因为内容相同文本的sha1是必然相同的
+
+
         Utils.writeObject(indexFile,bInfo);
-
-        //需要暂存的文件名和它的sha hash记录到index当中
-        //感觉blobinfo用hashmap存储或许更好
-
-        //TODO,最后，若存储的blob和前面一个commit中的完全一致，则不应add
     }
 
 
@@ -127,8 +143,8 @@ public class Repository {
         Commit m = new Commit();
         m.setParent1(Repository.getMaster());
 
-        File parentCommitFile = Utils.join(GITLET_DIR,"commit", Repository.getMaster());
-        File indexFile = Utils.join(GITLET_DIR, "index");
+        File parentCommitFile = Utils.join(COMMIT_DIR, Repository.getMaster());
+        File indexFile = Utils.join(INDEX_DIR);
 
         Commit parentCommit = Utils.readObject(parentCommitFile, Commit.class);
         BlobInfo index = Utils.readObject(indexFile, BlobInfo.class);
@@ -144,13 +160,11 @@ public class Repository {
         Set<String> oldFileNames = oldBlobInfo.getAllFilename();
         for(String fn:oldFileNames){
             if(!newBlobInfo.isExist(fn)){
-                newBlobInfo.add(fn,oldBlobInfo.find(fn));
+                newBlobInfo.add(fn,oldBlobInfo.find(fn),oldBlobInfo.findIsRemoved(fn));
             }
         }
-
         m.setBlobInfo(newBlobInfo);
-        //TODO:这里只有add和继承，还要考虑rm后，有些键值需要删除
-        //至此添加完了文件和hash的信息，再设置一下日期和信息即可
+        //至此添加完了文件和hash和是否被删除的信息，再设置一下日期和信息即可
         Date date = Calendar.getInstance().getTime();
         DateFormat dateFormat  =new SimpleDateFormat("E MMM dd HH:mm:ss yyyy Z");
         String strDate = dateFormat.format(date);
@@ -163,15 +177,14 @@ public class Repository {
         Utils.writeObject(commitNewFile, m);
         //设置新的master
         Repository.setMaster(mSha1);
-        //TODO: 更新index的情况。可以直接删除？
+        // 更新index的情况。可以直接清空
+        BlobInfo newIndex = new BlobInfo();
+        writeObject(INDEX_DIR, newIndex);
     }
 
     public static void log() {
         //先从master找当前commit
-        File masterFile = Utils.join(GITLET_DIR, "master");
-        String s = Repository.getMaster();
-        File lastCommit = Utils.join(GITLET_DIR, "commit", s);
-        Commit m = readObject(lastCommit, Commit.class);
+        Commit m = masterCommit();
         while (m.getParent1()!=null) {
             System.out.println("===");
             System.out.println("commit "+ m.getHash());
@@ -189,5 +202,53 @@ public class Repository {
         System.out.println(m.getMessage());
         System.out.println("");
         //TODO:MERGE log.
+    }
+
+    public static void globalLog() {
+        List<String> allCommitName = plainFilenamesIn(COMMIT_DIR);
+        for (String name:allCommitName) {
+            File commitFile = join(COMMIT_DIR, name);
+            Commit m = readObject(commitFile, Commit.class);
+            System.out.println("===");
+            System.out.println("commit "+ m.getHash());
+            System.out.println("Date: "+m.getDate());
+            System.out.println(m.getMessage());
+            System.out.println("");
+        }
+    }
+
+    private static Commit masterCommit() {
+        File masterFile = Utils.join(GITLET_DIR, "master");
+        String s = Repository.getMaster();
+        File lastCommit = Utils.join(GITLET_DIR, "commit", s);
+        Commit m = readObject(lastCommit, Commit.class);
+        return m;
+    }
+
+    private static BlobInfo indexBlob() {
+        File index = join(INDEX_DIR);
+        BlobInfo b = readObject(index, BlobInfo.class);
+        return b;
+    }
+    public static void remove(String arg) {
+
+        Commit master = masterCommit();
+        BlobInfo oldBlob = master.getBlobInfo();
+        BlobInfo indexBlob = indexBlob();
+
+        if (!oldBlob.isExist(arg) && !indexBlob.isExist(arg)) {
+            System.out.println("No reason to remove the file.");
+            System.exit(0);
+        }
+
+        indexBlob.remove(arg);
+        if(oldBlob.isExist(arg)) {
+            indexBlob.add(arg, oldBlob.find(arg), true);
+            File argFile = join(CWD, arg);
+            restrictedDelete(argFile);
+        }
+
+        writeObject(INDEX_DIR, indexBlob);
+
     }
 }

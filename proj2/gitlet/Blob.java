@@ -6,6 +6,8 @@ public class Blob implements Serializable {
     //具体的文件内容
     private String contents;
     private String filename;
+
+    private String sha1;
     public String getContents() {
         return contents;
     }
@@ -15,7 +17,10 @@ public class Blob implements Serializable {
     }
 
     public String getSha1() {
-        return Utils.sha1(this.contents);
+        if (sha1 == null){
+            sha1 = Utils.sha1(this.contents);
+        }
+        return sha1;
     }
 
     public void setFilename(String filename) {

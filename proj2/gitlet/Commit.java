@@ -111,5 +111,6 @@ public class Commit implements Serializable {
         StringBuilder s = new StringBuilder(message);
         s.append(date);
         return Utils.sha1(s.toString());
+        //自己构造每个commit的独一无二的sha1 hash
     }
 }
