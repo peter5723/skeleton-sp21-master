@@ -445,6 +445,10 @@ public class Repository {
         //写着写着就忘记了，要改变head的branch
         head.setBranchName(branchName);
         writeObject(HEAD_DIR, head);
+        //还要清空暂存区。。
+        BlobInfo newIndex = new BlobInfo();
+        writeObject(INDEX_DIR, newIndex);
+
     }
 
     private static Blob findBlob(BlobInfo blobInfo, String filename) {
