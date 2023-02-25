@@ -130,7 +130,7 @@ public class Repository {
 
 
     //判断有无init
-    public static void JudgeInit() {
+    public static void judgeInit() {
         File f = Utils.join(GITLET_DIR);
         if(!f.exists()) {
             System.out.println("Not in an initialized Gitlet directory.");
@@ -250,5 +250,60 @@ public class Repository {
 
         writeObject(INDEX_DIR, indexBlob);
 
+    }
+
+    public static void find(String arg) {
+        int isPrint = 0;
+        List<String> allCommitName = plainFilenamesIn(COMMIT_DIR);
+        for (String name:allCommitName) {
+            File commitFile = join(COMMIT_DIR, name);
+            Commit m = readObject(commitFile, Commit.class);
+            if (arg.equals(m.getMessage())) {
+                System.out.println(m.getHash());
+                isPrint++;
+            }
+        }
+        if (isPrint==0) {
+            System.out.println("Found no commit with that message");
+        }
+    }
+
+    public static void getStatus() {
+        System.out.println("=== Branches ===");
+        //TODO 等我完善了branch再加
+        System.out.println("*master");
+        System.out.println("");
+        Commit masterCommit = masterCommit();
+        BlobInfo oldBlob = masterCommit.getBlobInfo();
+        BlobInfo indexBlob = indexBlob();
+        Set<String> stageFile = new HashSet<>();
+        Set<String> removeFile = new HashSet<>();
+        Set<String> allFile = indexBlob.getAllFilename();
+        for(String oneFile:allFile) {
+            File thisFile = join(CWD, oneFile);
+            if(indexBlob.findIsRemoved(oneFile)) {
+                removeFile.add(oneFile);
+            } else if(!indexBlob.findIsRemoved(oneFile)
+                    &&thisFile.exists()
+                    &&sha1(readContentsAsString(thisFile))
+                    .equals(indexBlob.find(oneFile))) {
+                stageFile.add(oneFile);
+            }
+        }
+        System.out.println("=== Staged Files ===");
+        for(String i:stageFile) {
+            System.out.println(i);
+        }
+        System.out.println("");
+        System.out.println("=== Removed Files ===");
+        for(String i:removeFile) {
+            System.out.println(i);
+        }
+        System.out.println("");
+        System.out.println("=== Modifications Not Staged For Commit ===");
+        System.out.println("");
+        System.out.println("=== Untracked Files ===");
+        System.out.println("");
+        //TODO:剩下的条件判断有点麻烦
     }
 }

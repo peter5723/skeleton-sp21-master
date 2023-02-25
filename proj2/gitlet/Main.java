@@ -22,7 +22,7 @@ public class Main {
                 Repository.initGitlet();
                 break;
             case "add":
-                Repository.JudgeInit();
+                Repository.judgeInit();
                 //判断是否初始化了
                 if (args.length < 2) {
                     System.out.println("Incorrect operands.");
@@ -31,7 +31,7 @@ public class Main {
                 Repository.addGitlet(args[1]);
                 break;
             case "commit":
-                Repository.JudgeInit();
+                Repository.judgeInit();
                 if(args.length < 2) {
                     System.out.println("Please enter a commit message.");
                     System.exit(0);
@@ -39,16 +39,24 @@ public class Main {
                 Repository.commitGitlet(args[1]);
                 break;
             case "rm":
-                Repository.JudgeInit();
+                Repository.judgeInit();
                 Repository.remove(args[1]);
                 break;
             case "log":
-                Repository.JudgeInit();
+                Repository.judgeInit();
                 Repository.log();
                 break;
             case "global-log":
-                Repository.JudgeInit();
+                Repository.judgeInit();
                 Repository.globalLog();
+                break;
+            case "find":
+                Repository.judgeInit();
+                Repository.find(args[1]);
+                break;
+            case "status":
+                Repository.judgeInit();
+                Repository.getStatus();
                 break;
             // TODO: FILL THE REST IN
 
