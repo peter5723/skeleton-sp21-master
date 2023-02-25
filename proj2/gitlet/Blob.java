@@ -8,6 +8,7 @@ public class Blob implements Serializable {
     private String filename;
 
     private String sha1;
+
     public String getContents() {
         return contents;
     }
@@ -17,7 +18,7 @@ public class Blob implements Serializable {
     }
 
     public String getSha1() {
-        if (sha1 == null){
+        if (sha1 == null) {
             sha1 = Utils.sha1(this.contents);
         }
         return sha1;

@@ -10,11 +10,12 @@ import static gitlet.Utils.*;
 
 // TODO: any imports you need here
 
-/** Represents a gitlet repository.
+/**
+ * Represents a gitlet repository.
  *  TODO: It's a good idea to give a description here of what else this Class
  *  does at a high level.
  *
- *  @author TODO
+ * @author TODO
  */
 public class Repository {
     /**
@@ -25,9 +26,13 @@ public class Repository {
      * variable is used. We've provided two examples for you.
      */
 
-    /** The current working directory. */
+    /**
+     * The current working directory.
+     */
     public static final File CWD = new File(System.getProperty("user.dir"));
-    /** The .gitlet directory. */
+    /**
+     * The .gitlet directory.
+     */
     public static final File GITLET_DIR = join(CWD, ".gitlet");
 
     public static final File HEAD_DIR = Utils.join(GITLET_DIR, "head");
@@ -64,8 +69,8 @@ public class Repository {
     public static void setHeadWithBranch(String branchName) {
         File branchFile = join(BRANCH_DIR, branchName);
 
-        if(branchFile.exists()){
-            String branchSha1 =  readObject(branchFile, String.class);
+        if (branchFile.exists()) {
+            String branchSha1 = readObject(branchFile, String.class);
             File headFile = HEAD_DIR;
             Head newHead = new Head();
             newHead.setBranchName(branchName);
@@ -74,15 +79,13 @@ public class Repository {
         }
 
 
-
     }
-
 
 
     public static void initGitlet() throws IOException {
         //首先看是否有已经存在的gitlet系统，有的话报错退出
         File f = Utils.join(GITLET_DIR);
-        if(f.exists()){
+        if (f.exists()) {
             System.out.println("A Gitlet version-control system already exists in the current directory.");
             System.exit(0);
         }
@@ -107,12 +110,12 @@ public class Repository {
         commitDir.mkdir();
         branchDir.mkdir();
 
-        File fm = Utils.join(COMMIT_DIR,msha);
+        File fm = Utils.join(COMMIT_DIR, msha);
         File masterBranch = join(BRANCH_DIR, "master");
         writeObject(masterBranch, msha);
         setHeadWithBranch("master");
         //Head指向当前commit
-        Utils.writeObject(fm,m);
+        Utils.writeObject(fm, m);
         //存储第一个commit
     }
 
@@ -131,36 +134,36 @@ public class Repository {
         String bSha1 = b.getSha1();
 
 
-        File f2 = Utils.join(BLOB_DIR,bSha1);
+        File f2 = Utils.join(BLOB_DIR, bSha1);
         Utils.writeObject(f2, b);
         //将暂存的blob存储到blob文件夹中,不用管是否重复了
 
         File indexFile = Utils.join(INDEX_DIR);
         BlobInfo bInfo = new BlobInfo();
-        if(indexFile.exists()) {
+        if (indexFile.exists()) {
             bInfo = Utils.readObject(indexFile, BlobInfo.class);
         }
-        bInfo.add(arg,bSha1);
+        bInfo.add(arg, bSha1);
         //如果add的文件binfo中已经存在，就会自动更新成新版本的
         //最后，若存储的blob和前面一个commit中的完全一致，则不应add，将之从blobinfo列表中删除
 
         Commit headCommit = headCommit();
         BlobInfo oldBlobInfo = headCommit.getBlobInfo();
         String oldSha1 = oldBlobInfo.find(arg);
-        if(oldSha1!=null&&oldSha1.equals(bSha1)) {
+        if (oldSha1 != null && oldSha1.equals(bSha1)) {
             bInfo.remove(arg);
         }
         //这很简单，因为内容相同文本的sha1是必然相同的
 
 
-        Utils.writeObject(indexFile,bInfo);
+        Utils.writeObject(indexFile, bInfo);
     }
 
 
     //判断有无init
     public static void judgeInit() {
         File f = Utils.join(GITLET_DIR);
-        if(!f.exists()) {
+        if (!f.exists()) {
             System.out.println("Not in an initialized Gitlet directory.");
             System.exit(0);
         }
@@ -176,7 +179,7 @@ public class Repository {
 
         Commit parentCommit = Utils.readObject(parentCommitFile, Commit.class);
         BlobInfo index = Utils.readObject(indexFile, BlobInfo.class);
-        if (index==null){
+        if (index == null) {
             System.out.println("No changes added to the commit.");
             System.exit(0);
         }
@@ -186,22 +189,22 @@ public class Repository {
         BlobInfo oldBlobInfo = parentCommit.getBlobInfo();
 
         Set<String> oldFileNames = oldBlobInfo.getAllFilename();
-        for(String fn:oldFileNames){
-            if(!newBlobInfo.isExist(fn)){
-                newBlobInfo.add(fn,oldBlobInfo.find(fn),oldBlobInfo.findIsRemoved(fn));
+        for (String fn : oldFileNames) {
+            if (!newBlobInfo.isExist(fn)) {
+                newBlobInfo.add(fn, oldBlobInfo.find(fn), oldBlobInfo.findIsRemoved(fn));
             }
         }
         m.setBlobInfo(newBlobInfo);
         //至此添加完了文件和hash和是否被删除的信息，再设置一下日期和信息即可
         Date date = Calendar.getInstance().getTime();
-        DateFormat dateFormat  =new SimpleDateFormat("E MMM dd HH:mm:ss yyyy Z");
+        DateFormat dateFormat = new SimpleDateFormat("E MMM dd HH:mm:ss yyyy Z");
         String strDate = dateFormat.format(date);
         m.setDate(strDate);
         m.setMessage(arg);
         //日期设置完，根据massage和date信息设置commit的hash
         String mSha1 = m.getHash();
         //储存commit
-        File commitNewFile = Utils.join(GITLET_DIR,"commit",mSha1);
+        File commitNewFile = Utils.join(GITLET_DIR, "commit", mSha1);
         Utils.writeObject(commitNewFile, m);
         //设置新的Head
         Head head = readObject(HEAD_DIR, Head.class);
@@ -219,20 +222,20 @@ public class Repository {
     public static void log() {
         //先从head找当前commit
         Commit m = headCommit();
-        while (m.getParent1()!=null) {
+        while (m.getParent1() != null) {
             System.out.println("===");
-            System.out.println("commit "+ m.getHash());
-            System.out.println("Date: "+m.getDate());
+            System.out.println("commit " + m.getHash());
+            System.out.println("Date: " + m.getDate());
             System.out.println(m.getMessage());
             System.out.println("");
             String sParent = m.getParent1();
-            File nextCommit = join(GITLET_DIR,"commit",sParent);
+            File nextCommit = join(GITLET_DIR, "commit", sParent);
             m = readObject(nextCommit, Commit.class);
         }
         //print first commit
         System.out.println("===");
-        System.out.println("commit "+ m.getHash());
-        System.out.println("Date: "+m.getDate());
+        System.out.println("commit " + m.getHash());
+        System.out.println("Date: " + m.getDate());
         System.out.println(m.getMessage());
         System.out.println("");
         //TODO:MERGE log.
@@ -240,12 +243,12 @@ public class Repository {
 
     public static void globalLog() {
         List<String> allCommitName = plainFilenamesIn(COMMIT_DIR);
-        for (String name:allCommitName) {
+        for (String name : allCommitName) {
             File commitFile = join(COMMIT_DIR, name);
             Commit m = readObject(commitFile, Commit.class);
             System.out.println("===");
-            System.out.println("commit "+ m.getHash());
-            System.out.println("Date: "+m.getDate());
+            System.out.println("commit " + m.getHash());
+            System.out.println("Date: " + m.getDate());
             System.out.println(m.getMessage());
             System.out.println("");
         }
@@ -264,6 +267,7 @@ public class Repository {
         BlobInfo b = readObject(index, BlobInfo.class);
         return b;
     }
+
     public static void remove(String arg) {
 
         Commit master = headCommit();
@@ -276,7 +280,7 @@ public class Repository {
         }
 
         indexBlob.remove(arg);
-        if(oldBlob.isExist(arg)) {
+        if (oldBlob.isExist(arg)) {
             indexBlob.add(arg, oldBlob.find(arg), true);
             File argFile = join(CWD, arg);
             restrictedDelete(argFile);
@@ -289,7 +293,7 @@ public class Repository {
     public static void find(String arg) {
         int isPrint = 0;
         List<String> allCommitName = plainFilenamesIn(COMMIT_DIR);
-        for (String name:allCommitName) {
+        for (String name : allCommitName) {
             File commitFile = join(COMMIT_DIR, name);
             Commit m = readObject(commitFile, Commit.class);
             if (arg.equals(m.getMessage())) {
@@ -297,7 +301,7 @@ public class Repository {
                 isPrint++;
             }
         }
-        if (isPrint==0) {
+        if (isPrint == 0) {
             System.out.println("Found no commit with that message");
         }
     }
@@ -313,24 +317,24 @@ public class Repository {
         Set<String> stageFile = new HashSet<>();
         Set<String> removeFile = new HashSet<>();
         Set<String> allFile = indexBlob.getAllFilename();
-        for(String oneFile:allFile) {
+        for (String oneFile : allFile) {
             File thisFile = join(CWD, oneFile);
-            if(indexBlob.findIsRemoved(oneFile)) {
+            if (indexBlob.findIsRemoved(oneFile)) {
                 removeFile.add(oneFile);
-            } else if(!indexBlob.findIsRemoved(oneFile)
-                    &&thisFile.exists()
-                    &&sha1(readContentsAsString(thisFile))
+            } else if (!indexBlob.findIsRemoved(oneFile)
+                    && thisFile.exists()
+                    && sha1(readContentsAsString(thisFile))
                     .equals(indexBlob.find(oneFile))) {
                 stageFile.add(oneFile);
             }
         }
         System.out.println("=== Staged Files ===");
-        for(String i:stageFile) {
+        for (String i : stageFile) {
             System.out.println(i);
         }
         System.out.println("");
         System.out.println("=== Removed Files ===");
-        for(String i:removeFile) {
+        for (String i : removeFile) {
             System.out.println(i);
         }
         System.out.println("");
@@ -339,5 +343,54 @@ public class Repository {
         System.out.println("=== Untracked Files ===");
         System.out.println("");
         //TODO:剩下的条件判断有点麻烦
+    }
+
+    private static String findContents(String filename, Commit c) {
+        BlobInfo currentBlob = c.getBlobInfo();
+        if (!currentBlob.isExist(filename)) {
+            System.out.println("File does not exist in that commit.");
+            System.exit(0);
+        }
+        String shaOfFile = currentBlob.find(filename);
+        File contextFile = join(BLOB_DIR, shaOfFile);
+        Blob b = readObject(contextFile, Blob.class);
+        String s = b.getContents();
+        return s;
+    }
+
+    public static void checkout(String filename) {
+        Commit headCommit = headCommit();
+        String s = findContents(filename, headCommit);
+        File neededFile = join(CWD, filename);
+        writeContents(neededFile, s);
+
+    }
+
+    public static void checkout(String commitID, String filename) {
+        //这个commitID不一定是40位的，注意。
+        List<String> allCommitName = Utils.plainFilenamesIn(COMMIT_DIR);
+        int lengthOfID = commitID.length();
+        int hasMatched = 0;
+        String theCommit = new String();
+        for (String commitName : allCommitName) {
+            if (commitName.substring(0, lengthOfID).equals(commitID)) {
+                hasMatched++;
+                theCommit = commitName;
+                break;
+            }
+        }
+        if (hasMatched == 0) {
+            System.out.println("No commit with that id exists.");
+            System.exit(0);
+        }
+        File CommitFile = join(COMMIT_DIR, theCommit);
+        Commit c = readObject(CommitFile, Commit.class);
+        String s = findContents(filename, c);
+        File neededFile = join(CWD, filename);
+        writeContents(neededFile, s);
+
+    }
+
+    public static void checkoutWithBranch(String branchName) {
     }
 }
