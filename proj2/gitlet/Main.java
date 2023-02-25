@@ -58,6 +58,10 @@ public class Main {
                 Repository.judgeInit();
                 Repository.getStatus();
                 break;
+            case "checkout":
+                Repository.judgeInit();
+
+                break;
             // TODO: FILL THE REST IN
 
             default:

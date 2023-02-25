@@ -30,13 +30,16 @@ public class Repository {
     /** The .gitlet directory. */
     public static final File GITLET_DIR = join(CWD, ".gitlet");
 
-    public static final File MASTER_DIR = Utils.join(GITLET_DIR, "master");
+    public static final File HEAD_DIR = Utils.join(GITLET_DIR, "head");
 
     public static final File BLOB_DIR = Utils.join(GITLET_DIR, "blob");
 
     public static final File COMMIT_DIR = Utils.join(GITLET_DIR, "commit");
 
     public static final File INDEX_DIR = Utils.join(GITLET_DIR, "index");
+
+    public static final File BRANCH_DIR = join(GITLET_DIR, "branch");
+
     /* TODO: fill in the rest of this class. */
 
     //private static String master;
@@ -44,16 +47,37 @@ public class Repository {
     //注意，我一直想错了
     //master也是要“离线储存”的
 
-    public static String getMaster() {
-        File masterFile = MASTER_DIR;
-        String s = readObject(masterFile, String.class);
-        return s;
+    public static String getHead() {
+        File headFile = HEAD_DIR;
+        Head s = readObject(headFile, Head.class);
+        return s.getSha1();
     }
 
-    public static void setMaster(String m) {
-        File masterFile = MASTER_DIR;
-        writeObject(masterFile,m);
+    public static void setHead(String sha1) {
+        //默认指向同一个branch
+        File headFile = join(HEAD_DIR);
+        Head head = readObject(headFile, Head.class);
+        head.setSha1(sha1);
+        writeObject(headFile, head);
     }
+
+    public static void setHeadWithBranch(String branchName) {
+        File branchFile = join(BRANCH_DIR, branchName);
+
+        if(branchFile.exists()){
+            String branchSha1 =  readObject(branchFile, String.class);
+            File headFile = HEAD_DIR;
+            Head newHead = new Head();
+            newHead.setBranchName(branchName);
+            newHead.setSha1(branchSha1);
+            writeObject(headFile, newHead);
+        }
+
+
+
+    }
+
+
 
     public static void initGitlet() throws IOException {
         //首先看是否有已经存在的gitlet系统，有的话报错退出
@@ -76,14 +100,18 @@ public class Repository {
         //index文件则是文件记录
         File blobDir = BLOB_DIR;
         File commitDir = COMMIT_DIR;
+        File branchDir = BRANCH_DIR;
         //File indexFile = Utils.join(GITLET_DIR, "index");
         //indexFile.createNewFile();
         blobDir.mkdir();
         commitDir.mkdir();
+        branchDir.mkdir();
 
         File fm = Utils.join(COMMIT_DIR,msha);
-        setMaster(msha);
-        //master指向当前commit
+        File masterBranch = join(BRANCH_DIR, "master");
+        writeObject(masterBranch, msha);
+        setHeadWithBranch("master");
+        //Head指向当前commit
         Utils.writeObject(fm,m);
         //存储第一个commit
     }
@@ -116,8 +144,8 @@ public class Repository {
         //如果add的文件binfo中已经存在，就会自动更新成新版本的
         //最后，若存储的blob和前面一个commit中的完全一致，则不应add，将之从blobinfo列表中删除
 
-        Commit master = masterCommit();
-        BlobInfo oldBlobInfo = master.getBlobInfo();
+        Commit headCommit = headCommit();
+        BlobInfo oldBlobInfo = headCommit.getBlobInfo();
         String oldSha1 = oldBlobInfo.find(arg);
         if(oldSha1!=null&&oldSha1.equals(bSha1)) {
             bInfo.remove(arg);
@@ -141,9 +169,9 @@ public class Repository {
     public static void commitGitlet(String arg) {
 
         Commit m = new Commit();
-        m.setParent1(Repository.getMaster());
+        m.setParent1(Repository.getHead());
 
-        File parentCommitFile = Utils.join(COMMIT_DIR, Repository.getMaster());
+        File parentCommitFile = Utils.join(COMMIT_DIR, Repository.getHead());
         File indexFile = Utils.join(INDEX_DIR);
 
         Commit parentCommit = Utils.readObject(parentCommitFile, Commit.class);
@@ -175,16 +203,22 @@ public class Repository {
         //储存commit
         File commitNewFile = Utils.join(GITLET_DIR,"commit",mSha1);
         Utils.writeObject(commitNewFile, m);
-        //设置新的master
-        Repository.setMaster(mSha1);
+        //设置新的Head
+        Head head = readObject(HEAD_DIR, Head.class);
+        Repository.setHead(mSha1);
+        File branchFile = join(BRANCH_DIR, head.getBranchName());
+        //TODO:branch不存在
+        writeObject(branchFile, head.getSha1());
         // 更新index的情况。可以直接清空
         BlobInfo newIndex = new BlobInfo();
         writeObject(INDEX_DIR, newIndex);
+
+
     }
 
     public static void log() {
-        //先从master找当前commit
-        Commit m = masterCommit();
+        //先从head找当前commit
+        Commit m = headCommit();
         while (m.getParent1()!=null) {
             System.out.println("===");
             System.out.println("commit "+ m.getHash());
@@ -217,9 +251,9 @@ public class Repository {
         }
     }
 
-    private static Commit masterCommit() {
-        File masterFile = Utils.join(GITLET_DIR, "master");
-        String s = Repository.getMaster();
+    private static Commit headCommit() {
+
+        String s = Repository.getHead();
         File lastCommit = Utils.join(GITLET_DIR, "commit", s);
         Commit m = readObject(lastCommit, Commit.class);
         return m;
@@ -232,7 +266,7 @@ public class Repository {
     }
     public static void remove(String arg) {
 
-        Commit master = masterCommit();
+        Commit master = headCommit();
         BlobInfo oldBlob = master.getBlobInfo();
         BlobInfo indexBlob = indexBlob();
 
@@ -273,8 +307,8 @@ public class Repository {
         //TODO 等我完善了branch再加
         System.out.println("*master");
         System.out.println("");
-        Commit masterCommit = masterCommit();
-        BlobInfo oldBlob = masterCommit.getBlobInfo();
+        Commit headCommit = headCommit();
+        BlobInfo oldBlob = headCommit.getBlobInfo();
         BlobInfo indexBlob = indexBlob();
         Set<String> stageFile = new HashSet<>();
         Set<String> removeFile = new HashSet<>();
