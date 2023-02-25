@@ -47,22 +47,42 @@ public class Main {
                 break;
             case "rm":
                 Repository.judgeInit();
+                if (args.length != 2) {
+                    System.out.println("Incorrect operands.");
+                    System.exit(0);
+                }
                 Repository.remove(args[1]);
                 break;
             case "log":
                 Repository.judgeInit();
+                if (args.length != 1) {
+                    System.out.println("Incorrect operands.");
+                    System.exit(0);
+                }
                 Repository.log();
                 break;
             case "global-log":
                 Repository.judgeInit();
+                if (args.length != 1) {
+                    System.out.println("Incorrect operands.");
+                    System.exit(0);
+                }
                 Repository.globalLog();
                 break;
             case "find":
                 Repository.judgeInit();
+                if (args.length != 2) {
+                    System.out.println("Incorrect operands.");
+                    System.exit(0);
+                }
                 Repository.find(args[1]);
                 break;
             case "status":
                 Repository.judgeInit();
+                if (args.length != 1) {
+                    System.out.println("Incorrect operands.");
+                    System.exit(0);
+                }
                 Repository.getStatus();
                 break;
             case "checkout":
@@ -73,11 +93,7 @@ public class Main {
                         System.exit(0);
                     }
                     Repository.checkout(args[2]);
-                } else if (args[2].equals("--")) {
-                    if (args.length != 4) {
-                        System.out.println("Incorrect operands.");
-                        System.exit(0);
-                    }
+                } else if (args.length == 4 && args[2].equals("--")) {
                     Repository.checkout(args[1], args[3]);
                 } else if (args.length == 2) {
                     Repository.checkoutWithBranch(args[1]);
@@ -85,6 +101,22 @@ public class Main {
                     System.out.println("Incorrect operands.");
                     System.exit(0);
                 }
+                break;
+            case "branch":
+                Repository.judgeInit();
+                if (args.length != 2) {
+                    System.out.println("Incorrect operands.");
+                    System.exit(0);
+                }
+                Repository.setNewBranch(args[1]);
+                break;
+            case "rm-branch":
+                Repository.judgeInit();
+                if (args.length != 2) {
+                    System.out.println("Incorrect operands.");
+                    System.exit(0);
+                }
+                Repository.deleteBranch(args[1]);
                 break;
             // TODO: FILL THE REST IN
 

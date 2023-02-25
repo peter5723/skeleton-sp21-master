@@ -209,8 +209,8 @@ public class Repository {
         //设置新的Head
         Head head = readObject(HEAD_DIR, Head.class);
         Repository.setHead(mSha1);
+        //更新当前branch
         File branchFile = join(BRANCH_DIR, head.getBranchName());
-        //TODO:branch不存在
         writeObject(branchFile, head.getSha1());
         // 更新index的情况。可以直接清空
         BlobInfo newIndex = new BlobInfo();
@@ -308,8 +308,15 @@ public class Repository {
 
     public static void getStatus() {
         System.out.println("=== Branches ===");
-        //TODO 等我完善了branch再加
-        System.out.println("*master");
+        Head head = readObject(HEAD_DIR, Head.class);
+        List<String> branchList = Utils.plainFilenamesIn(BRANCH_DIR);
+        Collections.sort(branchList);
+        for (String oneBranch : branchList) {
+            if (oneBranch.equals(head.getBranchName())) {
+                System.out.print("*");
+            }
+            System.out.println(oneBranch);
+        }
         System.out.println("");
         Commit headCommit = headCommit();
         BlobInfo oldBlob = headCommit.getBlobInfo();
@@ -392,5 +399,87 @@ public class Repository {
     }
 
     public static void checkoutWithBranch(String branchName) {
+        File branchFile = join(BRANCH_DIR, branchName);
+        if (!branchFile.exists()) {
+            System.out.println("No such branch exists.");
+            System.exit(0);
+        }
+        Head head = readObject(HEAD_DIR, Head.class);
+        String currentBranch = head.getBranchName();
+        if (currentBranch.equals(branchName)) {
+            System.out.println("No such branch exists.");
+            System.exit(0);
+        }
+        Commit oldCommit = headCommit();
+        BlobInfo oldBlobInfo = oldCommit.getBlobInfo();
+
+        String newCommitSha1 = readObject(branchFile, String.class);
+        File newCommitFile = join(COMMIT_DIR, newCommitSha1);
+        Commit newCommit = readObject(newCommitFile, Commit.class);
+        BlobInfo newBlobInfo = newCommit.getBlobInfo();
+
+        List<String> cwdList = plainFilenamesIn(CWD);
+        for (String oneFilename : cwdList) {
+            if (newBlobInfo.isExist(oneFilename) && !oldBlobInfo.isExist(oneFilename)) {
+                System.out.println("There is an untracked file in the way; delete it, or add and commit it first.");
+                System.exit(0);
+            }
+        }
+        for (String oneOldFile : oldBlobInfo.getAllFilename()) {
+            //不存在就删除
+            if (!newBlobInfo.isExist(oneOldFile)) {
+                File file = join(CWD, oneOldFile);
+                if (file.exists()) {
+                    restrictedDelete(file);
+                }
+            }
+        }
+
+        for (String oneNewFile : newBlobInfo.getAllFilename()) {
+            Blob b = findBlob(newBlobInfo, oneNewFile);
+            String contents = b.getContents();
+            File file = join(CWD, oneNewFile);
+            writeContents(file, contents);
+        }
+
+        //写着写着就忘记了，要改变head的branch
+        head.setBranchName(branchName);
+        writeObject(HEAD_DIR, head);
+    }
+
+    private static Blob findBlob(BlobInfo blobInfo, String filename) {
+        if (!blobInfo.isExist(filename)) {
+            return null;
+        }
+        String sha1 = blobInfo.find(filename);
+        File blobFile = join(BLOB_DIR, sha1);
+        Blob b = readObject(blobFile, Blob.class);
+        return b;
+    }
+
+    public static void setNewBranch(String branchName) {
+        List<String> BranchList = Utils.plainFilenamesIn(BRANCH_DIR);
+        if (BranchList.contains(branchName)) {
+            System.out.println("A branch with that name already exists.");
+            System.exit(0);
+        }
+        File newBranchFile = join(BRANCH_DIR, branchName);
+        String headCommitSha1 = getHead();
+        writeObject(newBranchFile, headCommitSha1);
+    }
+
+    public static void deleteBranch(String branchName) {
+        Head head = readObject(HEAD_DIR, Head.class);
+        String currentBranch = head.getBranchName();
+        if (branchName.equals(currentBranch)) {
+            System.out.println("Cannot remove the current branch.");
+            System.exit(0);
+        }
+        File waitToDelete = join(BRANCH_DIR, branchName);
+        if (!waitToDelete.exists()) {
+            System.out.println("A branch with that name does not exist.");
+            System.exit(0);
+        }
+        waitToDelete.delete();
     }
 }
