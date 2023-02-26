@@ -126,6 +126,14 @@ public class Main {
                 }
                 Repository.reset(args[1]);
                 break;
+            case "merge":
+                Repository.judgeInit();
+                if (args.length != 2) {
+                    System.out.println("Incorrect operands.");
+                    System.exit(0);
+                }
+                Repository.merge(args[1]);
+                break;
             // TODO: FILL THE REST IN
 
             default:

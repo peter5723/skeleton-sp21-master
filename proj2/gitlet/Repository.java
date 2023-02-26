@@ -497,7 +497,7 @@ public class Repository {
         //同时修改head和对应的branch
         String theCommit = findTheCommit(commitID);
         Head head = readObject(HEAD_DIR, Head.class);
-        String currentBranch =  head.getBranchName();
+        String currentBranch = head.getBranchName();
         File branchFile = join(BRANCH_DIR, currentBranch);
 
         setNewBranch("tempBranch");
@@ -509,7 +509,9 @@ public class Repository {
         deleteBranch("tempBranch");
 
 
+    }
 
-
+    public static void merge(String branchName) {
+        //Todo:
     }
 }
