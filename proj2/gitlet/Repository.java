@@ -373,8 +373,7 @@ public class Repository {
 
     }
 
-    public static void checkout(String commitID, String filename) {
-        //这个commitID不一定是40位的，注意。
+    private static String findTheCommit(String commitID) {
         List<String> allCommitName = Utils.plainFilenamesIn(COMMIT_DIR);
         int lengthOfID = commitID.length();
         int hasMatched = 0;
@@ -390,6 +389,13 @@ public class Repository {
             System.out.println("No commit with that id exists.");
             System.exit(0);
         }
+
+        return theCommit;
+    }
+
+    public static void checkout(String commitID, String filename) {
+        //这个commitID不一定是40位的，注意。
+        String theCommit = findTheCommit(commitID);
         File CommitFile = join(COMMIT_DIR, theCommit);
         Commit c = readObject(CommitFile, Commit.class);
         String s = findContents(filename, c);
@@ -485,5 +491,25 @@ public class Repository {
             System.exit(0);
         }
         waitToDelete.delete();
+    }
+
+    public static void reset(String commitID) {
+        //同时修改head和对应的branch
+        String theCommit = findTheCommit(commitID);
+        Head head = readObject(HEAD_DIR, Head.class);
+        String currentBranch =  head.getBranchName();
+        File branchFile = join(BRANCH_DIR, currentBranch);
+
+        setNewBranch("tempBranch");
+        checkoutWithBranch("tempBranch");
+
+        writeObject(branchFile, theCommit);
+        checkoutWithBranch(currentBranch);
+
+        deleteBranch("tempBranch");
+
+
+
+
     }
 }

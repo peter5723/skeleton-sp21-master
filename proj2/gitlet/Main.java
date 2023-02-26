@@ -118,6 +118,14 @@ public class Main {
                 }
                 Repository.deleteBranch(args[1]);
                 break;
+            case "reset":
+                Repository.judgeInit();
+                if (args.length != 2) {
+                    System.out.println("Incorrect operands.");
+                    System.exit(0);
+                }
+                Repository.reset(args[1]);
+                break;
             // TODO: FILL THE REST IN
 
             default:
