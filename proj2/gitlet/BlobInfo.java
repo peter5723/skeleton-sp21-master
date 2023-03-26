@@ -8,7 +8,7 @@ public class BlobInfo implements Serializable {
     private HashMap<String, String> hashMap;
     private HashMap<String, Boolean> isRemove;
 
-    //存储文件是否被删除
+    //store the information about the file is deleted
     BlobInfo() {
         hashMap = new HashMap<>();
         isRemove = new HashMap<>();
@@ -16,7 +16,6 @@ public class BlobInfo implements Serializable {
 
     public void add(String fileName, String sha1) {
         hashMap.put(fileName, sha1);
-        //如果连续两次传入相同的filename，put是自动更新的，故无妨
         isRemove.put(fileName, false);
     }
 

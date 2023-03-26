@@ -29,26 +29,26 @@ public class Commit implements Serializable {
 
     private String message;
     private BlobInfo blobInfo;
-    //这个我得改一下， 不要存储blobs而是存储blobs的hash。
-    //然后文件夹里分开存放Commit和blobs
+    //store blob's hash
+    //store Commit and blobs separately
 
-    //may all restart。
+    //may all restart
     //and date
     private String date;
     /* TODO: fill in the rest of this class. */
-    //我想了想，应该让commit就直接作为树的Node比较好
+    //commit is the node of tree
     private String parent1;
     private String parent2;
     private String child1;
     private String child2;
-    //这个可能也是存储Hash字符就可以了。
+    //just store hash
 
-    //题目要求二叉树即可；
+    //just binary tree
     public Commit() {
         message = "initial commit";
         date = "Wed Dec 31 16:00:00 1969 -0800";
         blobInfo = new BlobInfo();
-        //empty和null是不一样的。
+        //empty and full
     }
 
     public String getMessage() {
@@ -114,6 +114,6 @@ public class Commit implements Serializable {
         StringBuilder s = new StringBuilder(message);
         s.append(date);
         return Utils.sha1(s.toString());
-        //自己构造每个commit的独一无二的sha1 hash
+        //each commit has its unique hash.
     }
 }

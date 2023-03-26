@@ -47,10 +47,6 @@ public class Repository {
 
     /* TODO: fill in the rest of this class. */
 
-    //private static String master;
-    //当前节点
-    //注意，我一直想错了
-    //master也是要“离线储存”的
 
     public static String getHead() {
         File headFile = HEAD_DIR;
@@ -59,7 +55,7 @@ public class Repository {
     }
 
     public static void setHead(String sha1) {
-        //默认指向同一个branch
+        //point to the same branch (default)
         File headFile = join(HEAD_DIR);
         Head head = readObject(headFile, Head.class);
         head.setSha1(sha1);
@@ -83,24 +79,22 @@ public class Repository {
 
 
     public static void initGitlet() throws IOException {
-        //首先看是否有已经存在的gitlet系统，有的话报错退出
         File f = Utils.join(GITLET_DIR);
         if (f.exists()) {
             System.out.println("A Gitlet version-control system already exists in the current directory.");
             System.exit(0);
         }
-        //创建Gitlet文件夹
+        //create folds
         f.mkdir();
-        //创建一个新的空的commit
+        //create empty commit
         Commit m = new Commit();
         StringBuilder stringBuilder = new StringBuilder(m.getMessage());
         stringBuilder.append(m.getDate());
-        //sha1只能对字符串使用求解hash
+        //sha1 can only get hash of a string
         String msha = Utils.sha1(stringBuilder.toString());
 
 
-        //下面构建blob文件夹、commit文件夹
-        //index文件则是文件记录
+
         File blobDir = BLOB_DIR;
         File commitDir = COMMIT_DIR;
         File branchDir = BRANCH_DIR;
@@ -114,20 +108,22 @@ public class Repository {
         File masterBranch = join(BRANCH_DIR, "master");
         writeObject(masterBranch, msha);
         setHeadWithBranch("master");
-        //Head指向当前commit
+        //Head to the current commit
         Utils.writeObject(fm, m);
-        //存储第一个commit
+        //store first commit
+        BlobInfo newIndex = new BlobInfo();
+        writeObject(INDEX_DIR, newIndex);
     }
 
     public static void addGitlet(String arg) {
-        //首先在文件列表中查找文件，找不到则退出
+        //firstly, search for the file and quit if fails.
         File f = Utils.join(CWD, arg);
         if (!f.exists()) {
             System.out.println("File does not exist.");
             System.exit(0);
         }
         String a = Utils.readContentsAsString(f);
-        //只有在文件是文本文件的时候才可以使用readContentsAsString。
+        //only when file is a wenbenwenjian you can use readContentsAsString
         Blob b = new Blob();
         b.setContents(a);
         b.setFilename(arg);
@@ -136,7 +132,6 @@ public class Repository {
 
         File f2 = Utils.join(BLOB_DIR, bSha1);
         Utils.writeObject(f2, b);
-        //将暂存的blob存储到blob文件夹中,不用管是否重复了
 
         File indexFile = Utils.join(INDEX_DIR);
         BlobInfo bInfo = new BlobInfo();
@@ -144,8 +139,7 @@ public class Repository {
             bInfo = Utils.readObject(indexFile, BlobInfo.class);
         }
         bInfo.add(arg, bSha1);
-        //如果add的文件binfo中已经存在，就会自动更新成新版本的
-        //最后，若存储的blob和前面一个commit中的完全一致，则不应add，将之从blobinfo列表中删除
+
 
         Commit headCommit = headCommit();
         BlobInfo oldBlobInfo = headCommit.getBlobInfo();
@@ -153,14 +147,13 @@ public class Repository {
         if (oldSha1 != null && oldSha1.equals(bSha1)) {
             bInfo.remove(arg);
         }
-        //这很简单，因为内容相同文本的sha1是必然相同的
 
 
         Utils.writeObject(indexFile, bInfo);
     }
 
 
-    //判断有无init
+    //judge if init
     public static void judgeInit() {
         File f = Utils.join(GITLET_DIR);
         if (!f.exists()) {
@@ -170,7 +163,11 @@ public class Repository {
     }
 
     public static void commitGitlet(String arg) {
-
+        if(arg.isEmpty()) {
+            System.out.println("Please enter a commit message.");
+            System.exit(0);
+        }
+        //m is the new commit
         Commit m = new Commit();
         m.setParent1(Repository.getHead());
 
@@ -179,12 +176,12 @@ public class Repository {
 
         Commit parentCommit = Utils.readObject(parentCommitFile, Commit.class);
         BlobInfo index = Utils.readObject(indexFile, BlobInfo.class);
-        if (index == null) {
+        if (index.isEmpty()) {
             System.out.println("No changes added to the commit.");
             System.exit(0);
         }
 
-        //上面我们已经得到了index，commit的意思：以index为准，没有的再继承parent commit
+
         BlobInfo newBlobInfo = index;
         BlobInfo oldBlobInfo = parentCommit.getBlobInfo();
 
@@ -195,24 +192,25 @@ public class Repository {
             }
         }
         m.setBlobInfo(newBlobInfo);
-        //至此添加完了文件和hash和是否被删除的信息，再设置一下日期和信息即可
+
         Date date = Calendar.getInstance().getTime();
         DateFormat dateFormat = new SimpleDateFormat("E MMM dd HH:mm:ss yyyy Z");
         String strDate = dateFormat.format(date);
         m.setDate(strDate);
         m.setMessage(arg);
-        //日期设置完，根据massage和date信息设置commit的hash
+
         String mSha1 = m.getHash();
-        //储存commit
+        //store commit
         File commitNewFile = Utils.join(GITLET_DIR, "commit", mSha1);
         Utils.writeObject(commitNewFile, m);
-        //设置新的Head
+        //set new Head
         Head head = readObject(HEAD_DIR, Head.class);
         Repository.setHead(mSha1);
-        //更新当前branch
+        //update branch
         File branchFile = join(BRANCH_DIR, head.getBranchName());
-        writeObject(branchFile, head.getSha1());
-        // 更新index的情况。可以直接清空
+        //head has been updated, so it should be read again. or just use the new commit's sha
+        writeObject(branchFile, mSha1);
+        // clean index
         BlobInfo newIndex = new BlobInfo();
         writeObject(INDEX_DIR, newIndex);
 
@@ -220,7 +218,7 @@ public class Repository {
     }
 
     public static void log() {
-        //先从head找当前commit
+        //get commit from head
         Commit m = headCommit();
         while (m.getParent1() != null) {
             System.out.println("===");
@@ -349,7 +347,7 @@ public class Repository {
         System.out.println("");
         System.out.println("=== Untracked Files ===");
         System.out.println("");
-        //TODO:剩下的条件判断有点麻烦
+        //TODO
     }
 
     private static String findContents(String filename, Commit c) {
@@ -394,7 +392,7 @@ public class Repository {
     }
 
     public static void checkout(String commitID, String filename) {
-        //这个commitID不一定是40位的，注意。
+
         String theCommit = findTheCommit(commitID);
         File CommitFile = join(COMMIT_DIR, theCommit);
         Commit c = readObject(CommitFile, Commit.class);
@@ -413,7 +411,7 @@ public class Repository {
         Head head = readObject(HEAD_DIR, Head.class);
         String currentBranch = head.getBranchName();
         if (currentBranch.equals(branchName)) {
-            System.out.println("No such branch exists.");
+            System.out.println("No need to checkout the current branch.");
             System.exit(0);
         }
         Commit oldCommit = headCommit();
@@ -432,7 +430,7 @@ public class Repository {
             }
         }
         for (String oneOldFile : oldBlobInfo.getAllFilename()) {
-            //不存在就删除
+            //delete if not exist
             if (!newBlobInfo.isExist(oneOldFile)) {
                 File file = join(CWD, oneOldFile);
                 if (file.exists()) {
@@ -448,10 +446,10 @@ public class Repository {
             writeContents(file, contents);
         }
 
-        //写着写着就忘记了，要改变head的branch
+        //head's branch
         head.setBranchName(branchName);
         writeObject(HEAD_DIR, head);
-        //还要清空暂存区。。
+        //clean index
         BlobInfo newIndex = new BlobInfo();
         writeObject(INDEX_DIR, newIndex);
 
@@ -494,7 +492,7 @@ public class Repository {
     }
 
     public static void reset(String commitID) {
-        //同时修改head和对应的branch
+        //correct head and corresponding branch at the same time
         String theCommit = findTheCommit(commitID);
         Head head = readObject(HEAD_DIR, Head.class);
         String currentBranch = head.getBranchName();

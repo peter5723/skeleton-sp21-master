@@ -30,7 +30,7 @@ public class Main {
                 break;
             case "add":
                 Repository.judgeInit();
-                //判断是否初始化了
+                //judge if init
                 if (args.length < 2) {
                     System.out.println("Incorrect operands.");
                     System.exit(0);

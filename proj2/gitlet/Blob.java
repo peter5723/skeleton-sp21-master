@@ -3,7 +3,7 @@ package gitlet;
 import java.io.Serializable;
 
 public class Blob implements Serializable {
-    //具体的文件内容
+    //the file contents
     private String contents;
     private String filename;
 
