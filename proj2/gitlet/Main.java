@@ -137,7 +137,7 @@ public class Main {
             // TODO: FILL THE REST IN
 
             default:
-                System.out.println("Please enter a command.");
+                System.out.println("No command with that name exists.");
                 System.exit(0);
         }
     }

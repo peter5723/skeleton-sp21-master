@@ -447,8 +447,7 @@ public class Repository {
         }
 
         //head's branch
-        head.setBranchName(branchName);
-        writeObject(HEAD_DIR, head);
+        setHeadWithBranch(branchName);
         //clean index
         BlobInfo newIndex = new BlobInfo();
         writeObject(INDEX_DIR, newIndex);
