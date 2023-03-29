@@ -14,9 +14,10 @@ import java.util.Date; // TODO: You'll likely use this in this class
  *
  * @author TODO
  */
+//commit is the tree node.
 public class Commit implements Serializable {
     /**
-     * TODO: add instance variables here.
+     *
      *
      * List all instance variables of the Commit class here with a useful
      * comment above them describing what that variable represents and how that
@@ -32,8 +33,8 @@ public class Commit implements Serializable {
     //store blob's hash
     //store Commit and blobs separately
 
-    //may all restart
-    //and date
+
+
     private String date;
     /* TODO: fill in the rest of this class. */
     //commit is the node of tree

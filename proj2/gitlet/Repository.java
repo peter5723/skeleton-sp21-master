@@ -509,6 +509,81 @@ public class Repository {
     }
 
     public static void merge(String branchName) {
-        //Todo:
+        //first we need to find split commit
+        Commit splitCommit = findSplitCommit(branchName);
+        //TODO
     }
+
+    private static Commit findSplitCommit(String branchName) {
+        //given the branch name, return the ancestor of given branch and head.
+        Commit headCommit = headCommit();
+        Commit branchCommit = getCommitFromBranch(branchName);
+        ArrayList<Commit> allAncestorHead = getAncestors(headCommit);
+        ArrayList<Commit> allAncestorBranch = getAncestors(branchCommit);
+        Collections.reverse(allAncestorHead);
+        Collections.reverse(allAncestorBranch);
+        ArrayList<Commit> sameAncestor = new ArrayList<>();
+        sameAncestor.addAll(allAncestorHead);
+        sameAncestor.retainAll(allAncestorBranch);
+        //the last same ancestor is the split commit
+        return sameAncestor.get(sameAncestor.size()-1);
+    }
+    private static Commit getCommitFromBranch(String branchName) {
+        //get the commit instance from the branch points.
+        List<String> BranchList = Utils.plainFilenamesIn(BRANCH_DIR);
+        if (!BranchList.contains(branchName)) {
+            System.out.println("branch does not exist.");
+            System.exit(0);
+        }
+        File branchFile = join(BRANCH_DIR, branchName);
+        String commitSha = readObject(branchFile, String.class);
+        return getCommitFromSha(commitSha);
+    }
+
+    private static Commit getCommitFromSha(String sha1){
+        File commitFile = join(COMMIT_DIR, sha1);
+        if (!commitFile.exists()) {
+            System.out.println("file not exists");
+        }
+        return readObject(commitFile, Commit.class);
+    }
+
+    private static Commit getFirstParentCommit(Commit commit) {
+        //get the first parent Commit
+        String parentCommitSha = commit.getParent1();
+        if (parentCommitSha==null) {
+            return null;
+        }
+        return getCommitFromSha(parentCommitSha);
+    }
+
+    private static Commit getSecondParentCommit(Commit commit) {
+        //get the 2nd parent Commit
+        String parentCommitSha = commit.getParent2();
+        if (parentCommitSha==null) {
+            return null;
+        }
+        return getCommitFromSha(parentCommitSha);
+    }
+
+    private static ArrayList<Commit> getAncestors(Commit commit){
+        // get all the ancestors of Commit(include commit itself) using bfs.
+        ArrayDeque<Commit> queue = new ArrayDeque<>();
+        ArrayList<Commit> ancestors = new ArrayList<>();
+        queue.push(commit);
+        while (!queue.isEmpty()) {
+            Commit currentCommit = queue.pop();
+            ancestors.add(currentCommit);
+            Commit parent1 = getFirstParentCommit(currentCommit);
+            Commit parent2 = getSecondParentCommit(currentCommit);
+            if(parent1!=null) {
+                queue.push(parent1);
+            }
+            if(parent2!=null) {
+                queue.push(parent2);
+            }
+        }
+        return ancestors;
+    }
+
 }
