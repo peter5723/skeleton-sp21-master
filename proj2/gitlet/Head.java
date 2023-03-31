@@ -4,7 +4,7 @@ import java.io.Serializable;
 
 public class Head implements Serializable {
     private String sha1;
-    private String BranchName;
+    private String branchName;
 
     public String getSha1() {
         return sha1;
@@ -15,10 +15,10 @@ public class Head implements Serializable {
     }
 
     public String getBranchName() {
-        return BranchName;
+        return branchName;
     }
 
     public void setBranchName(String branchName) {
-        BranchName = branchName;
+        this.branchName = branchName;
     }
 }

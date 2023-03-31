@@ -62,10 +62,15 @@ public class BlobInfo implements Serializable {
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         BlobInfo blobInfo = (BlobInfo) o;
-        return Objects.equals(hashMap, blobInfo.hashMap) && Objects.equals(isRemove, blobInfo.isRemove);
+        return Objects.equals(hashMap, blobInfo.hashMap)
+                && Objects.equals(isRemove, blobInfo.isRemove);
     }
 
     @Override
