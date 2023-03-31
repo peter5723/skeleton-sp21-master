@@ -559,10 +559,7 @@ public class Repository {
                 System.exit(0);
             }
         }
-
-
         //first we need to find split commit
-
         if (splitCommit.equals(branchCommit)) {
             System.out.println("Given branch is an ancestor of the current branch.");
             System.exit(0);
@@ -572,14 +569,49 @@ public class Repository {
             System.out.println("Current branch fast-forwarded.");
             System.exit(0);
         }
-
         //second, consider the logic, we should check the file
         //information in given branch and compare to the current
         //and split node.
         BlobInfo infoGiven = branchCommit.getBlobInfo();
         BlobInfo infoSplit = splitCommit.getBlobInfo();
         BlobInfo infoCur = headCommit.getBlobInfo();
-        boolean isConflicted = false;
+        boolean isConflicted = traverseGiven(branchName, branchCommit, splitCommit, headCommit);
+        for (String curFile : infoCur.getAllFilename()) {
+            //just remain unless conflict.
+            Boolean isRemovedInGiven = infoGiven.findIsRemoved(curFile);
+            Boolean isRemovedInCur = infoCur.findIsRemoved(curFile);
+            if (!equalState(curFile, infoSplit, infoCur) && !equalState(curFile, infoCur, infoGiven)
+                    && !equalState(curFile, infoGiven, infoSplit)) {
+                String curContent = new String();
+                String givenContent = new String();
+                if (infoCur.isExist(curFile) && !isRemovedInCur) {
+                    curContent = findContents(curFile, headCommit);
+                }
+                if (infoGiven.isExist(curFile) && !isRemovedInGiven) {
+                    givenContent = findContents(curFile, branchCommit);
+                }
+                String mergeContent = mergeConflict(curContent, givenContent);
+                writeContents(join(CWD, curFile), mergeContent);
+                addGitlet(curFile);
+                isConflicted = true;
+            }
+        }
+        //commit
+        String commitMsg = "Merged " + branchName + " into " + head.getBranchName() + ".";
+        StringBuilder sbMsg = new StringBuilder(commitMsg);
+        if (isConflicted) {
+            System.out.println("Encountered a merge conflict.");
+        }
+        String parent2Sha = branchCommit.getHash();
+        commitGitletWithParent2(sbMsg.toString(), parent2Sha);
+    }
+
+    private static boolean traverseGiven(
+            String branchName, Commit branchCommit, Commit splitCommit, Commit headCommit) {
+        boolean isConflict = false;
+        BlobInfo infoGiven = branchCommit.getBlobInfo();
+        BlobInfo infoSplit = splitCommit.getBlobInfo();
+        BlobInfo infoCur = headCommit.getBlobInfo();
         for (String fileInGiven : infoGiven.getAllFilename()) {
 
             Boolean isRemovedInGiven = infoGiven.findIsRemoved(fileInGiven);
@@ -611,39 +643,10 @@ public class Repository {
                 String mergeContent = mergeConflict(curContent, givenContent);
                 writeContents(join(CWD, fileInGiven), mergeContent);
                 addGitlet(fileInGiven);
-                isConflicted = true;
+                isConflict = true;
             }
         }
-
-        for (String curFile : infoCur.getAllFilename()) {
-            //just remain unless conflict.
-
-            Boolean isRemovedInGiven = infoGiven.findIsRemoved(curFile);
-            Boolean isRemovedInCur = infoCur.findIsRemoved(curFile);
-            if (!equalState(curFile, infoSplit, infoCur) && !equalState(curFile, infoCur, infoGiven)
-                    && !equalState(curFile, infoGiven, infoSplit)) {
-                String curContent = new String();
-                String givenContent = new String();
-                if (infoCur.isExist(curFile) && !isRemovedInCur) {
-                    curContent = findContents(curFile, headCommit);
-                }
-                if (infoGiven.isExist(curFile) && !isRemovedInGiven) {
-                    givenContent = findContents(curFile, branchCommit);
-                }
-                String mergeContent = mergeConflict(curContent, givenContent);
-                writeContents(join(CWD, curFile), mergeContent);
-                addGitlet(curFile);
-                isConflicted = true;
-            }
-        }
-        //commit
-        String commitMsg = "Merged " + branchName + " into " + head.getBranchName() + ".";
-        StringBuilder sbMsg = new StringBuilder(commitMsg);
-        if (isConflicted) {
-            System.out.println("Encountered a merge conflict.");
-        }
-        String parent2Sha = branchCommit.getHash();
-        commitGitletWithParent2(sbMsg.toString(), parent2Sha);
+        return  isConflict;
     }
 
     private static boolean equalState(String filename, BlobInfo infoA, BlobInfo infoB) {
