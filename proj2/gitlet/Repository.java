@@ -8,18 +8,18 @@ import java.util.*;
 
 import static gitlet.Utils.*;
 
-// TODO: any imports you need here
+
 
 /**
  * Represents a gitlet repository.
- *  TODO: It's a good idea to give a description here of what else this Class
+ *  It's a good idea to give a description here of what else this Class
  *  does at a high level.
  *
- * @author TODO
+ * @author peter
  */
 public class Repository {
     /**
-     * TODO: add instance variables here.
+     *  add instance variables here.
      *
      * List all instance variables of the Repository class here with a useful
      * comment above them describing what that variable represents and how that
@@ -45,7 +45,7 @@ public class Repository {
 
     public static final File BRANCH_DIR = join(GITLET_DIR, "branch");
 
-    /* TODO: fill in the rest of this class. */
+    /*  fill in the rest of this class. */
 
 
     public static String getHead() {
@@ -226,6 +226,9 @@ public class Repository {
         while (m.getParent1() != null) {
             System.out.println("===");
             System.out.println("commit " + m.getHash());
+            if (m.getParent2()!=null) {
+                printMerge(m);
+            }
             System.out.println("Date: " + m.getDate());
             System.out.println(m.getMessage());
             System.out.println("");
@@ -239,7 +242,12 @@ public class Repository {
         System.out.println("Date: " + m.getDate());
         System.out.println(m.getMessage());
         System.out.println("");
-        //TODO:MERGE log.
+    }
+
+    private static void printMerge(Commit m) {
+        String parent1 = m.getParent1().substring(0,7);
+        String parent2 = m.getParent2().substring(0,7);
+        System.out.println("Merge: "+parent1+" "+parent2);
     }
 
     public static void globalLog() {
@@ -270,18 +278,19 @@ public class Repository {
     }
 
     public static void remove(String arg) {
-
+        //If a file is staged for removal, it is an untracked file.
         Commit master = headCommit();
         BlobInfo oldBlob = master.getBlobInfo();
         BlobInfo indexBlob = indexBlob();
 
-        if (!oldBlob.isExist(arg) && !indexBlob.isExist(arg)) {
+        if ((!oldBlob.isExist(arg) || oldBlob.isExist(arg) && oldBlob.findIsRemoved(arg))
+                && (!indexBlob.isExist(arg) || indexBlob.isExist(arg) && indexBlob().findIsRemoved(arg))) {
             System.out.println("No reason to remove the file.");
             System.exit(0);
         }
 
         indexBlob.remove(arg);
-        if (oldBlob.isExist(arg)) {
+        if (oldBlob.isExist(arg) && !oldBlob.findIsRemoved(arg)) {
             indexBlob.add(arg, oldBlob.find(arg), true);
             File argFile = join(CWD, arg);
             restrictedDelete(argFile);
@@ -427,14 +436,16 @@ public class Repository {
 
         List<String> cwdList = plainFilenamesIn(CWD);
         for (String oneFilename : cwdList) {
-            if (newBlobInfo.isExist(oneFilename) && !oldBlobInfo.isExist(oneFilename)) {
+            if (newBlobInfo.isExist(oneFilename) && !oldBlobInfo.isExist(oneFilename)
+                    || oldBlobInfo.isExist(oneFilename) && oldBlobInfo.findIsRemoved(oneFilename)) {
                 System.out.println("There is an untracked file in the way; delete it, or add and commit it first.");
                 System.exit(0);
             }
         }
         for (String oneOldFile : oldBlobInfo.getAllFilename()) {
             //delete if not exist
-            if (!newBlobInfo.isExist(oneOldFile)) {
+            if ((!newBlobInfo.isExist(oneOldFile)||newBlobInfo.findIsRemoved(oneOldFile))
+                    && !oldBlobInfo.findIsRemoved(oneOldFile)) {
                 File file = join(CWD, oneOldFile);
                 if (file.exists()) {
                     restrictedDelete(file);
@@ -443,10 +454,12 @@ public class Repository {
         }
 
         for (String oneNewFile : newBlobInfo.getAllFilename()) {
-            Blob b = findBlob(newBlobInfo, oneNewFile);
-            String contents = b.getContents();
-            File file = join(CWD, oneNewFile);
-            writeContents(file, contents);
+            if (!newBlobInfo.findIsRemoved(oneNewFile)) { //don't consider removed
+                Blob b = findBlob(newBlobInfo, oneNewFile);
+                String contents = b.getContents();
+                File file = join(CWD, oneNewFile);
+                writeContents(file, contents);
+            }
         }
 
         //head's branch
@@ -566,30 +579,29 @@ public class Repository {
         BlobInfo infoCur = headCommit.getBlobInfo();
         boolean isConflicted = false;
         for (String fileInGiven : infoGiven.getAllFilename()) {
-            String shaInGiven = infoGiven.find(fileInGiven);
-            String shaInSplit = infoSplit.find(fileInGiven);
-            String shaInCur = infoCur.find(fileInGiven);
+
             Boolean isRemovedInGiven = infoGiven.findIsRemoved(fileInGiven);
             Boolean isRemovedInCur = infoCur.findIsRemoved(fileInGiven);
             String CommitID = readObject(join(BRANCH_DIR, branchName), String.class);
-            if (shaInCur.equals(shaInSplit) && !shaInGiven.equals(shaInSplit)) {
+            //apart from sha1(contents) you should also consider whether the file is removed
+            if (!equalState(fileInGiven, infoGiven, infoCur) && equalState(fileInGiven, infoSplit, infoCur)) {
                 if (!isRemovedInGiven) {
                     checkout(CommitID, fileInGiven);
                     addGitlet(fileInGiven);
                 } else {
-                    if (!shaInCur.isEmpty()) {
+                    if (infoCur.isExist(fileInGiven) && !isRemovedInCur) {
                         remove(fileInGiven);
                     }
                 }
-            } else if (!shaInCur.equals(shaInGiven) && !shaInCur.equals(shaInSplit)
-                    && !shaInSplit.equals(shaInGiven)) {
+            } else if (!equalState(fileInGiven, infoSplit, infoCur) && !equalState(fileInGiven, infoCur, infoGiven)
+                    && !equalState(fileInGiven, infoGiven, infoSplit)) {
                 //all modify so there will be conflicts
                 String curContent = new String();
                 String givenContent = new String();
-                if (!shaInCur.isEmpty()&&!isRemovedInCur) {
+                if (infoCur.isExist(fileInGiven)&&!isRemovedInCur) {
                     curContent = findContents(fileInGiven, headCommit);
                 }
-                if (!shaInGiven.isEmpty()&&!isRemovedInGiven) {
+                if (infoGiven.isExist(fileInGiven)&&!isRemovedInGiven) {
                     givenContent = findContents(fileInGiven, branchCommit);
                 }
                 String mergeContent = mergeConflict(curContent, givenContent);
@@ -601,19 +613,17 @@ public class Repository {
 
         for (String curFile:infoCur.getAllFilename()) {
             //just remain unless conflict.
-            String shaInGiven = infoGiven.find(curFile);
-            String shaInSplit = infoSplit.find(curFile);
-            String shaInCur = infoCur.find(curFile);
+
             Boolean isRemovedInGiven = infoGiven.findIsRemoved(curFile);
             Boolean isRemovedInCur = infoCur.findIsRemoved(curFile);
-            if (!shaInCur.equals(shaInGiven) && !shaInCur.equals(shaInSplit)
-                    && !shaInSplit.equals(shaInGiven)) {
+            if (!equalState(curFile, infoSplit, infoCur) && !equalState(curFile, infoCur, infoGiven)
+                    && !equalState(curFile, infoGiven, infoSplit)) {
                 String curContent = new String();
                 String givenContent = new String();
-                if (!shaInCur.isEmpty()&&!isRemovedInCur) {
+                if (infoCur.isExist(curFile)&&!isRemovedInCur) {
                     curContent = findContents(curFile, headCommit);
                 }
-                if (!shaInGiven.isEmpty()&&!isRemovedInGiven) {
+                if (infoGiven.isExist(curFile)&&!isRemovedInGiven) {
                     givenContent = findContents(curFile, branchCommit);
                 }
                 String mergeContent = mergeConflict(curContent, givenContent);
@@ -623,13 +633,19 @@ public class Repository {
             }
         }
         //commit
-        String commitMsg = "Merged " + branchName + "into " + head.getBranchName() +" name.\n";
+        String commitMsg = "Merged " + branchName + " into " + head.getBranchName()+".";
         StringBuilder sbMsg = new StringBuilder(commitMsg);
         if (isConflicted) {
-            sbMsg.append("Encountered a merge conflict.\n");
+            System.out.println("Encountered a merge conflict.");
         }
         String parent2Sha = branchCommit.getHash();
         commitGitletWithParent2(sbMsg.toString(), parent2Sha);
+    }
+
+    private static boolean equalState(String filename, BlobInfo infoA, BlobInfo infoB) {
+        //return whether the file's state is the same in two BlobInfos
+        return infoA.find(filename).equals(infoB.find(filename))
+                && infoA.findIsRemoved(filename) == infoB.findIsRemoved(filename);
     }
 
     private static String mergeConflict(String curContent, String givenContent) {

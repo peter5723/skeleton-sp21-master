@@ -56,6 +56,7 @@ public class BlobInfo implements Serializable {
     public void remove(String arg) {
         if (isExist(arg)) {
             hashMap.remove(arg);
+            isRemove.remove(arg);
         }
     }
 
