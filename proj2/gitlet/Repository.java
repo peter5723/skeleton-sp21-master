@@ -49,6 +49,7 @@ public class Repository {
 
 
     public static String getHead() {
+        //return head's Commit's sha1
         File headFile = HEAD_DIR;
         Head s = readObject(headFile, Head.class);
         return s.getSha1();
@@ -92,7 +93,6 @@ public class Repository {
         stringBuilder.append(m.getDate());
         //sha1 can only get hash of a string
         String msha = Utils.sha1(stringBuilder.toString());
-
 
 
         File blobDir = BLOB_DIR;
@@ -144,7 +144,7 @@ public class Repository {
         Commit headCommit = headCommit();
         BlobInfo oldBlobInfo = headCommit.getBlobInfo();
         String oldSha1 = oldBlobInfo.find(arg);
-        if (oldSha1 != null && oldSha1.equals(bSha1)) {
+        if (oldSha1.isEmpty() && oldSha1.equals(bSha1)) {
             bInfo.remove(arg);
         }
 
@@ -163,14 +163,18 @@ public class Repository {
     }
 
     public static void commitGitlet(String arg) {
-        if(arg.isEmpty()) {
+        commitGitletWithParent2(arg, null);
+    }
+
+    private static void commitGitletWithParent2(String arg, String parent2Sha) {
+        if (arg.isEmpty()) {
             System.out.println("Please enter a commit message.");
             System.exit(0);
         }
         //m is the new commit
         Commit m = new Commit();
         m.setParent1(Repository.getHead());
-
+        m.setParent2(parent2Sha);
         File parentCommitFile = Utils.join(COMMIT_DIR, Repository.getHead());
         File indexFile = Utils.join(INDEX_DIR);
 
@@ -213,9 +217,8 @@ public class Repository {
         // clean index
         BlobInfo newIndex = new BlobInfo();
         writeObject(INDEX_DIR, newIndex);
-
-
     }
+
 
     public static void log() {
         //get commit from head
@@ -509,9 +512,134 @@ public class Repository {
     }
 
     public static void merge(String branchName) {
-        //first we need to find split commit
+        //zero: manage failure cases
+        BlobInfo indexBlob = indexBlob();
+        if (!indexBlob.isEmpty()) {
+            System.out.println("You have uncommitted changes.");
+            System.exit(0);
+        }
+        File branchFile = join(BRANCH_DIR, branchName);
+        if (!branchFile.exists()) {
+            System.out.println("A branch with that name does not exist.");
+            System.exit(0);
+        }
+        Head head = readObject(HEAD_DIR, Head.class);
+        if (head.getBranchName().equals(branchName)) {
+            System.out.println("Cannot merge a branch with itself.");
+            System.exit(0);
+        }
         Commit splitCommit = findSplitCommit(branchName);
-        //TODO
+        Commit branchCommit = getCommitFromBranch(branchName);
+        Commit headCommit = headCommit();
+
+        List<String> cwdFiles = plainFilenamesIn(CWD);
+        Set<String> nowTrackedFiles = headCommit.getBlobInfo().getAllFilename();
+        List<String> unTrackedFiles = new ArrayList<>();
+        unTrackedFiles.addAll(cwdFiles);
+        unTrackedFiles.removeAll(nowTrackedFiles);
+        for (String untrack : unTrackedFiles) {
+            if (branchCommit.getBlobInfo().getAllFilename().contains(untrack)) {
+                System.out.println("There is an untracked file in the way; " +
+                        "delete it, or add and commit it first.");
+                System.exit(0);
+            }
+        }
+
+
+        //first we need to find split commit
+
+        if (splitCommit.equals(branchCommit)) {
+            System.out.println("Given branch is an ancestor of the current branch.");
+            System.exit(0);
+        }
+        if (splitCommit.equals(headCommit)) {
+            checkoutWithBranch(branchName);
+            System.out.println("Current branch fast-forwarded.");
+            System.exit(0);
+        }
+
+        //second, consider the logic, we should check the file
+        //information in given branch and compare to the current
+        //and split node.
+        BlobInfo infoGiven = branchCommit.getBlobInfo();
+        BlobInfo infoSplit = splitCommit.getBlobInfo();
+        BlobInfo infoCur = headCommit.getBlobInfo();
+        boolean isConflicted = false;
+        for (String fileInGiven : infoGiven.getAllFilename()) {
+            String shaInGiven = infoGiven.find(fileInGiven);
+            String shaInSplit = infoSplit.find(fileInGiven);
+            String shaInCur = infoCur.find(fileInGiven);
+            Boolean isRemovedInGiven = infoGiven.findIsRemoved(fileInGiven);
+            Boolean isRemovedInCur = infoCur.findIsRemoved(fileInGiven);
+            String CommitID = readObject(join(BRANCH_DIR, branchName), String.class);
+            if (shaInCur.equals(shaInSplit) && !shaInGiven.equals(shaInSplit)) {
+                if (!isRemovedInGiven) {
+                    checkout(CommitID, fileInGiven);
+                    addGitlet(fileInGiven);
+                } else {
+                    if (!shaInCur.isEmpty()) {
+                        remove(fileInGiven);
+                    }
+                }
+            } else if (!shaInCur.equals(shaInGiven) && !shaInCur.equals(shaInSplit)
+                    && !shaInSplit.equals(shaInGiven)) {
+                //all modify so there will be conflicts
+                String curContent = new String();
+                String givenContent = new String();
+                if (!shaInCur.isEmpty()&&!isRemovedInCur) {
+                    curContent = findContents(fileInGiven, headCommit);
+                }
+                if (!shaInGiven.isEmpty()&&!isRemovedInGiven) {
+                    givenContent = findContents(fileInGiven, branchCommit);
+                }
+                String mergeContent = mergeConflict(curContent, givenContent);
+                writeContents(join(CWD, fileInGiven), mergeContent);
+                addGitlet(fileInGiven);
+                isConflicted = true;
+            }
+        }
+
+        for (String curFile:infoCur.getAllFilename()) {
+            //just remain unless conflict.
+            String shaInGiven = infoGiven.find(curFile);
+            String shaInSplit = infoSplit.find(curFile);
+            String shaInCur = infoCur.find(curFile);
+            Boolean isRemovedInGiven = infoGiven.findIsRemoved(curFile);
+            Boolean isRemovedInCur = infoCur.findIsRemoved(curFile);
+            if (!shaInCur.equals(shaInGiven) && !shaInCur.equals(shaInSplit)
+                    && !shaInSplit.equals(shaInGiven)) {
+                String curContent = new String();
+                String givenContent = new String();
+                if (!shaInCur.isEmpty()&&!isRemovedInCur) {
+                    curContent = findContents(curFile, headCommit);
+                }
+                if (!shaInGiven.isEmpty()&&!isRemovedInGiven) {
+                    givenContent = findContents(curFile, branchCommit);
+                }
+                String mergeContent = mergeConflict(curContent, givenContent);
+                writeContents(join(CWD, curFile), mergeContent);
+                addGitlet(curFile);
+                isConflicted = true;
+            }
+        }
+        //commit
+        String commitMsg = "Merged " + branchName + "into " + head.getBranchName() +" name.\n";
+        StringBuilder sbMsg = new StringBuilder(commitMsg);
+        if (isConflicted) {
+            sbMsg.append("Encountered a merge conflict.\n");
+        }
+        String parent2Sha = branchCommit.getHash();
+        commitGitletWithParent2(sbMsg.toString(), parent2Sha);
+    }
+
+    private static String mergeConflict(String curContent, String givenContent) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("<<<<<<< HEAD\n");
+        sb.append(curContent);
+        sb.append("=======\n");
+        sb.append(givenContent);
+        sb.append(">>>>>>>");
+        return sb.toString();
     }
 
     private static Commit findSplitCommit(String branchName) {
@@ -526,8 +654,9 @@ public class Repository {
         sameAncestor.addAll(allAncestorHead);
         sameAncestor.retainAll(allAncestorBranch);
         //the last same ancestor is the split commit
-        return sameAncestor.get(sameAncestor.size()-1);
+        return sameAncestor.get(sameAncestor.size() - 1);
     }
+
     private static Commit getCommitFromBranch(String branchName) {
         //get the commit instance from the branch points.
         List<String> BranchList = Utils.plainFilenamesIn(BRANCH_DIR);
@@ -540,7 +669,7 @@ public class Repository {
         return getCommitFromSha(commitSha);
     }
 
-    private static Commit getCommitFromSha(String sha1){
+    private static Commit getCommitFromSha(String sha1) {
         File commitFile = join(COMMIT_DIR, sha1);
         if (!commitFile.exists()) {
             System.out.println("file not exists");
@@ -551,7 +680,7 @@ public class Repository {
     private static Commit getFirstParentCommit(Commit commit) {
         //get the first parent Commit
         String parentCommitSha = commit.getParent1();
-        if (parentCommitSha==null) {
+        if (parentCommitSha == null) {
             return null;
         }
         return getCommitFromSha(parentCommitSha);
@@ -560,26 +689,28 @@ public class Repository {
     private static Commit getSecondParentCommit(Commit commit) {
         //get the 2nd parent Commit
         String parentCommitSha = commit.getParent2();
-        if (parentCommitSha==null) {
+        if (parentCommitSha == null) {
             return null;
         }
         return getCommitFromSha(parentCommitSha);
     }
 
-    private static ArrayList<Commit> getAncestors(Commit commit){
+    private static ArrayList<Commit> getAncestors(Commit commit) {
         // get all the ancestors of Commit(include commit itself) using bfs.
         ArrayDeque<Commit> queue = new ArrayDeque<>();
         ArrayList<Commit> ancestors = new ArrayList<>();
         queue.push(commit);
         while (!queue.isEmpty()) {
             Commit currentCommit = queue.pop();
-            ancestors.add(currentCommit);
+            if (!ancestors.contains(currentCommit)) {
+                ancestors.add(currentCommit);
+            }
             Commit parent1 = getFirstParentCommit(currentCommit);
             Commit parent2 = getSecondParentCommit(currentCommit);
-            if(parent1!=null) {
+            if (parent1 != null) {
                 queue.push(parent1);
             }
-            if(parent2!=null) {
+            if (parent2 != null) {
                 queue.push(parent2);
             }
         }

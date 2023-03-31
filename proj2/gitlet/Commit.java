@@ -6,6 +6,7 @@ import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date; // TODO: You'll likely use this in this class
+import java.util.Objects;
 
 /**
  * Represents a gitlet commit object.
@@ -116,5 +117,18 @@ public class Commit implements Serializable {
         s.append(date);
         return Utils.sha1(s.toString());
         //each commit has its unique hash.
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Commit commit = (Commit) o;
+        return Objects.equals(message, commit.message) && Objects.equals(blobInfo, commit.blobInfo) && Objects.equals(date, commit.date) && Objects.equals(parent1, commit.parent1) && Objects.equals(parent2, commit.parent2) && Objects.equals(child1, commit.child1) && Objects.equals(child2, commit.child2);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(message, blobInfo, date, parent1, parent2, child1, child2);
     }
 }

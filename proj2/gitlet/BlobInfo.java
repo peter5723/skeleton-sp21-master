@@ -2,13 +2,16 @@ package gitlet;
 
 import java.io.Serializable;
 import java.util.HashMap;
+import java.util.Objects;
 import java.util.Set;
 
 public class BlobInfo implements Serializable {
     private HashMap<String, String> hashMap;
+    //hashmap: filename -> sha1
     private HashMap<String, Boolean> isRemove;
-
+    //isRemove: filename -> isRemoved
     //store the information about the file is deleted
+
     BlobInfo() {
         hashMap = new HashMap<>();
         isRemove = new HashMap<>();
@@ -38,7 +41,7 @@ public class BlobInfo implements Serializable {
 
     public String find(String fn) {
         if (!isExist(fn)) {
-            return null;
+            return "";
         }
         return hashMap.get(fn);
     }
@@ -54,5 +57,18 @@ public class BlobInfo implements Serializable {
         if (isExist(arg)) {
             hashMap.remove(arg);
         }
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        BlobInfo blobInfo = (BlobInfo) o;
+        return Objects.equals(hashMap, blobInfo.hashMap) && Objects.equals(isRemove, blobInfo.isRemove);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(hashMap, isRemove);
     }
 }
