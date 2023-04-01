@@ -335,9 +335,16 @@ public class Repository {
         Set<String> stageFile = new HashSet<>();
         Set<String> removeFile = new HashSet<>();
         Set<String> allFile = indexBlob.getAllFilename();
+        Set<String> deletedNotStaged = getDeletedNotStaged();
+        Set<String> modifiedNotStaged = getModifiedNotStaged();
+        Set<String> allNotStaged = new HashSet<>();
+        allNotStaged.addAll(deletedNotStaged);
+        allNotStaged.addAll(modifiedNotStaged);
+        Set<String> untrackedFile = new HashSet<>();
+        List<String> cwdFiles = plainFilenamesIn(CWD);
         for (String oneFile : allFile) {
             File thisFile = join(CWD, oneFile);
-            if (indexBlob.findIsRemoved(oneFile)) {
+            if (indexBlob.isExist(oneFile) && indexBlob.findIsRemoved(oneFile)) {
                 removeFile.add(oneFile);
             } else if (!indexBlob.findIsRemoved(oneFile)
                     && thisFile.exists()
@@ -346,21 +353,84 @@ public class Repository {
                 stageFile.add(oneFile);
             }
         }
+        for (String oneFile : cwdFiles) {
+            Boolean isOldTracked = oldBlob.isExist(oneFile) && !oldBlob.findIsRemoved(oneFile);
+            if (!indexBlob.isExist(oneFile) && !isOldTracked
+                    || indexBlob.findIsRemoved(oneFile) && isOldTracked) {
+                untrackedFile.add(oneFile);
+            }
+
+        }
         System.out.println("=== Staged Files ===");
         for (String i : stageFile) {
             System.out.println(i);
         }
         System.out.println("");
+
         System.out.println("=== Removed Files ===");
         for (String i : removeFile) {
             System.out.println(i);
         }
         System.out.println("");
+
         System.out.println("=== Modifications Not Staged For Commit ===");
+        for (String i : allNotStaged) {
+            System.out.println(i);
+        }
         System.out.println("");
+
         System.out.println("=== Untracked Files ===");
+        for (String i : untrackedFile) {
+            System.out.println(i);
+        }
         System.out.println("");
-        //please Modifications Not Staged For Commit
+
+
+    }
+
+
+    private static Set<String> getModifiedNotStaged() {
+        Commit head = headCommit();
+        BlobInfo oldBlob = head.getBlobInfo();
+        BlobInfo indexBlob = indexBlob();
+        List<String> cwdNames = plainFilenamesIn(CWD);
+        Set<String> set = new HashSet<>();
+        for (String oneFilename : cwdNames) {
+            Boolean trackInOld = oldBlob.isExist(oneFilename)
+                    && !oldBlob.findIsRemoved(oneFilename);
+            Boolean trackInNew = indexBlob.isExist(oneFilename)
+                    && !indexBlob.findIsRemoved(oneFilename);
+            File thisFile = join(CWD, oneFilename);
+            String contents = readContentsAsString(thisFile);
+            if ((trackInOld && !indexBlob().isExist(oneFilename)
+                    && !sha1(contents).equals(oldBlob.find(oneFilename)))
+                    || trackInNew && !sha1(contents).equals(indexBlob.find(oneFilename))) {
+                set.add(oneFilename + " (modified)");
+            }
+        }
+        return set;
+    }
+
+    private static Set<String> getDeletedNotStaged() {
+        Commit head = headCommit();
+        BlobInfo oldBlob = head.getBlobInfo();
+        BlobInfo indexBlob = indexBlob();
+        Set<String> allFilename = new HashSet<>();
+        allFilename.addAll(oldBlob.getAllFilename());
+        allFilename.addAll(indexBlob.getAllFilename());
+        Set<String> set = new HashSet<>();
+        for (String oneFilename : allFilename) {
+            File thisFile = join(CWD, oneFilename);
+            Boolean trackInOld = oldBlob.isExist(oneFilename)
+                    && !oldBlob.findIsRemoved(oneFilename);
+            if (trackInOld
+                    && !indexBlob.findIsRemoved(oneFilename) && !thisFile.exists()
+                    || indexBlob.isExist(oneFilename)
+                    && !indexBlob.findIsRemoved(oneFilename) && !thisFile.exists()) {
+                set.add(oneFilename + " (deleted)");
+            }
+        }
+        return set;
     }
 
     private static String findContents(String filename, Commit c) {
@@ -440,7 +510,7 @@ public class Repository {
             if (newBlobInfo.isExist(oneFilename) && !oldBlobInfo.isExist(oneFilename)
                     || oldBlobInfo.isExist(oneFilename) && oldBlobInfo.findIsRemoved(oneFilename)) {
                 System.out.println("There is an untracked file in the way; "
-                        +  "delete it, or add and commit it first.");
+                        + "delete it, or add and commit it first.");
                 System.exit(0);
             }
         }
@@ -572,15 +642,32 @@ public class Repository {
         //second, consider the logic, we should check the file
         //information in given branch and compare to the current
         //and split node.
+        boolean isConflicted = traverseGiven(branchName, branchCommit, splitCommit, headCommit);
+        isConflicted = isConflicted
+                || traverseCur(branchName, branchCommit, splitCommit, headCommit);
+        //commit
+        String commitMsg = "Merged " + branchName + " into " + head.getBranchName() + ".";
+        StringBuilder sbMsg = new StringBuilder(commitMsg);
+        if (isConflicted) {
+            System.out.println("Encountered a merge conflict.");
+        }
+        String parent2Sha = branchCommit.getHash();
+        commitGitletWithParent2(sbMsg.toString(), parent2Sha);
+    }
+
+    private static boolean traverseCur(String branchName,
+                                       Commit branchCommit,
+                                       Commit splitCommit, Commit headCommit) {
+        boolean isConflicted = false;
         BlobInfo infoGiven = branchCommit.getBlobInfo();
         BlobInfo infoSplit = splitCommit.getBlobInfo();
         BlobInfo infoCur = headCommit.getBlobInfo();
-        boolean isConflicted = traverseGiven(branchName, branchCommit, splitCommit, headCommit);
         for (String curFile : infoCur.getAllFilename()) {
             //just remain unless conflict.
             Boolean isRemovedInGiven = infoGiven.findIsRemoved(curFile);
             Boolean isRemovedInCur = infoCur.findIsRemoved(curFile);
-            if (!equalState(curFile, infoSplit, infoCur) && !equalState(curFile, infoCur, infoGiven)
+            if (!equalState(curFile, infoSplit, infoCur)
+                    && !equalState(curFile, infoCur, infoGiven)
                     && !equalState(curFile, infoGiven, infoSplit)) {
                 String curContent = new String();
                 String givenContent = new String();
@@ -596,18 +683,12 @@ public class Repository {
                 isConflicted = true;
             }
         }
-        //commit
-        String commitMsg = "Merged " + branchName + " into " + head.getBranchName() + ".";
-        StringBuilder sbMsg = new StringBuilder(commitMsg);
-        if (isConflicted) {
-            System.out.println("Encountered a merge conflict.");
-        }
-        String parent2Sha = branchCommit.getHash();
-        commitGitletWithParent2(sbMsg.toString(), parent2Sha);
+        return isConflicted;
     }
 
-    private static boolean traverseGiven(
-            String branchName, Commit branchCommit, Commit splitCommit, Commit headCommit) {
+    private static boolean traverseGiven(String branchName,
+                                         Commit branchCommit,
+                                         Commit splitCommit, Commit headCommit) {
         boolean isConflict = false;
         BlobInfo infoGiven = branchCommit.getBlobInfo();
         BlobInfo infoSplit = splitCommit.getBlobInfo();
@@ -646,7 +727,7 @@ public class Repository {
                 isConflict = true;
             }
         }
-        return  isConflict;
+        return isConflict;
     }
 
     private static boolean equalState(String filename, BlobInfo infoA, BlobInfo infoB) {
