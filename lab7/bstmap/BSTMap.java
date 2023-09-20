@@ -3,7 +3,7 @@ package bstmap;
 import java.util.Iterator;
 import java.util.Set;
 
-public class BSTMap<K extends Comparable, V> implements Map61B<K, V> {
+public class BSTMap<K extends Comparable<K>, V> implements Map61B<K, V> {
 
     private class BSTNode {
         K key;
@@ -83,6 +83,8 @@ public class BSTMap<K extends Comparable, V> implements Map61B<K, V> {
     }
 
     private BSTNode put(BSTNode root, K key, V value) {
+        //不是直接改，而是建立一个新实体，让指针指向那个新实体
+        //这样实际上就是在原来的树上改动
         if (root==null) {
             return new BSTNode(key, value, null, null);
         }

@@ -1,0 +1,6 @@
+Enter # strings to insert into each map: 100000
+class hashmap.MyHashMapALBuckets: 8.41 sec
+class hashmap.MyHashMapLLBuckets: 7.79 sec
+class hashmap.MyHashMapTSBuckets: 8.51 sec
+class hashmap.MyHashMapHSBuckets: 8.41 sec
+class hashmap.MyHashMapPQBuckets: 8.64 sec
